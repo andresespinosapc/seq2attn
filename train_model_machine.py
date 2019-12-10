@@ -180,6 +180,8 @@ if opt.attention:
         logging.info("No attention method provided. Using DOT method.")
         opt.attention_method = 'dot'
 
+log_comet_parameters(opt)
+
 ############################################################################
 # Prepare dataset
 src = SourceField(lower=opt.lower)
