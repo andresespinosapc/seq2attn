@@ -25,6 +25,8 @@ from machine.metrics import WordAccuracy
 from machine.trainer import SupervisedTrainer
 from machine.util.checkpoint import Checkpoint
 
+import random
+import numpy as np
 from machine.tasks import get_task
 from loss import L1Loss
 
@@ -109,6 +111,7 @@ except NameError:
 
 parser = argparse.ArgumentParser()
 
+parser.add_argument('--random_seed', type=int, default=None)
 parser.add_argument('--task', type=str, choices=[
     'lookup',
     'long_lookup',
@@ -194,6 +197,13 @@ if opt.attention:
         opt.attention_method = 'dot'
 
 log_comet_parameters(opt)
+# Set random seed
+if opt.random_seed:
+    random.seed(opt.random_seed)
+    np.random.seed(opt.random_seed)
+    torch.manual_seed(opt.random_seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(opt.random_seed)
 
 ############################################################################
 # Prepare dataset
@@ -373,7 +383,7 @@ seq2seq, logs = t.train(model=seq2seq,
                         loss_weights=loss_weights,
                         checkpoint_every=opt.save_every,
                         print_every=opt.print_every,
-                        random_seed=None,
+                        random_seed=opt.random_seed,
                         custom_callbacks=[CometLogger(experiment)])
 
 if opt.write_logs:
