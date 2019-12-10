@@ -49,26 +49,54 @@ TASK_DEFAULT_PARAMS = {
         'patience': 5,
         'epochs': 20,
     },
-    'baseline_2018': {
-        'full_focus': False,
+    'Hupkes_2019_lookup_baseline': {
+        'full_focus': True,
         'batch_size': 1,
         'embedding_size': 128,
         'hidden_size': 512,
+        'rnn_layers': 1,
         'rnn_cell': 'gru',
         'attention': 'pre-rnn',
         'attention_method': 'mlp',
         'max_len': 50,
+        'dropout': 0.5,
     },
-    'Hupkes_2018': {
+    'Hupkes_2019_lookup_seq2attn': {
         'full_focus': True,
         'batch_size': 1,
-        'embedding_size': 16,
-        'hidden_size': 512,
+        'embedding_size': 256,
+        'hidden_size': 256,
+        'rnn_layers': 1,
         'rnn_cell': 'gru',
         'attention': 'pre-rnn',
         'attention_method': 'mlp',
         'max_len': 50,
-    }
+        'dropout': 0.5,
+    },
+    'Hupkes_2019_SCAN_baseline': {
+        'full_focus': True,
+        'batch_size': 1,
+        'embedding_size': 200,
+        'hidden_size': 200,
+        'rnn_layers': 2,
+        'rnn_cell': 'lstm',
+        'attention': 'pre-rnn',
+        'attention_method': 'mlp',
+        'max_len': 50,
+        'dropout': 0.5,
+    },
+    'Hupkes_2019_SCAN_baseline': {
+        'full_focus': True,
+        'batch_size': 1,
+        'embedding_size': 512,
+        'hidden_size': 512,
+        'rnn_layers': 1,
+        'rnn_cell': 'gru',
+        'attention': 'pre-rnn',
+        'attention_method': 'mlp',
+        'max_len': 50,
+        'dropout': 0.5,
+    },
 }
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -81,7 +109,7 @@ except NameError:
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--task', type=str, choices=['lookup', 'symbol_rewriting', 'SCAN'], default='lookup')
-parser.add_argument('--default_params_key', type=str, choices=['task_defaults', 'baseline_2018', 'Hupkes_2018'], default='task_defaults')
+parser.add_argument('--default_params_key', type=str, choices=list(TASK_DEFAULT_PARAMS.keys()), default='task_defaults')
 parser.add_argument('--test_name', type=str, default='heldout_tables')
 
 parser.add_argument('--train', help='Training data')
@@ -174,13 +202,16 @@ elif len(dev_paths) == 1:
     opt.dev = dev_paths[0]
 else:
     raise ValueError('More than one test data with name %s was found' % (opt.test_name))
-opt.full_focus = TASK_DEFAULT_PARAMS[opt.default_params_key]['full_focus']
+opt.full_attention_focus = 'yes' if TASK_DEFAULT_PARAMS[opt.default_params_key]['full_focus'] else 'no'
 opt.batch_size = TASK_DEFAULT_PARAMS[opt.default_params_key]['batch_size']
 opt.embedding_size = TASK_DEFAULT_PARAMS[opt.default_params_key]['embedding_size']
 opt.hidden_size = TASK_DEFAULT_PARAMS[opt.default_params_key]['hidden_size']
+opt.n_layers = TASK_DEFAULT_PARAMS[opt.default_params_key]['rnn_layers']
 opt.rnn_cell = TASK_DEFAULT_PARAMS[opt.default_params_key]['rnn_cell']
 opt.attention = TASK_DEFAULT_PARAMS[opt.default_params_key]['attention']
 opt.attention_method = TASK_DEFAULT_PARAMS[opt.default_params_key]['attention_method']
+opt.dropout_p_encoder = TASK_DEFAULT_PARAMS[opt.default_params_key]['dropout']
+opt.dropout_p_decoder = TASK_DEFAULT_PARAMS[opt.default_params_key]['dropout']
 opt.max_len = TASK_DEFAULT_PARAMS[opt.default_params_key]['max_len']
 
 # generate training and testing data
