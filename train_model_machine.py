@@ -108,7 +108,16 @@ except NameError:
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('--task', type=str, choices=['lookup', 'symbol_rewriting', 'SCAN'], default='lookup')
+parser.add_argument('--task', type=str, choices=[
+    'lookup',
+    'long_lookup',
+    'long_lookup_oneshot',
+    'long_lookup_reverse',
+    'noisy_long_lookup_multi',
+    'noisy_long_lookup_single',
+    'long_lookup_intermediate_noise',
+    'symbol_rewriting',
+    'SCAN'], default='lookup')
 parser.add_argument('--default_params_key', type=str, choices=list(TASK_DEFAULT_PARAMS.keys()), default='task_defaults')
 parser.add_argument('--test_name', type=str, default='heldout_tables')
 
