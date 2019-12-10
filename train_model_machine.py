@@ -26,6 +26,7 @@ from machine.trainer import SupervisedTrainer
 from machine.util.checkpoint import Checkpoint
 
 from machine.tasks import get_task
+from loss import L1Loss
 
 comet_args = {
     'project_name': 'attentive-guidance',
@@ -120,6 +121,9 @@ parser.add_argument('--task', type=str, choices=[
     'SCAN'], default='lookup')
 parser.add_argument('--default_params_key', type=str, choices=list(TASK_DEFAULT_PARAMS.keys()), default='task_defaults')
 parser.add_argument('--test_name', type=str, default='heldout_tables')
+parser.add_argument('--l1_loss_inputs', type=str, nargs='*',
+    choices=['encoder_hidden', 'model_parameters'], default=[])
+parser.add_argument('--scale_l1_loss', type=float, default=1.)
 
 parser.add_argument('--train', help='Training data')
 parser.add_argument('--dev', help='Development data')
@@ -325,6 +329,10 @@ output_vocabulary = output_vocab.itos
 pad = output_vocab.stoi[tgt.pad_token]
 losses = [NLLLoss(ignore_index=pad)]
 loss_weights = [1.]
+
+for l1_loss_input in opt.l1_loss_inputs:
+    losses.append(L1Loss(input_name=l1_loss_input))
+    loss_weights.append(opt.scale_l1_loss)
 
 for loss in losses:
     loss.to(device)

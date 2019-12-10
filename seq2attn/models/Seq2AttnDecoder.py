@@ -75,6 +75,7 @@ class Seq2AttnDecoder(nn.Module):
     KEY_ATTN_SCORE = 'attention_score'
     KEY_LENGTH = 'length'
     KEY_SEQUENCE = 'sequence'
+    KEY_ENCODER_HIDDEN = 'encoder_hidden'
 
     def __init__(self, vocab_size, max_len, hidden_size,
                  sos_id, eos_id, embedding_dim,
@@ -289,6 +290,7 @@ class Seq2AttnDecoder(nn.Module):
                 function=F.log_softmax, teacher_forcing_ratio=0):
         """Forward."""
         ret_dict = dict()
+        ret_dict[Seq2AttnDecoder.KEY_ENCODER_HIDDEN] = encoder_hidden
         if self.use_attention:
             ret_dict[Seq2AttnDecoder.KEY_ATTN_SCORE] = list()
 
