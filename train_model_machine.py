@@ -121,7 +121,7 @@ parser.add_argument('--task', type=str, choices=[
     'noisy_long_lookup_single',
     'long_lookup_intermediate_noise',
     'symbol_rewriting',
-    'SCAN'], default='lookup')
+    'SCAN'])
 parser.add_argument('--default_params_key', type=str, choices=list(TASK_DEFAULT_PARAMS.keys()), default='task_defaults')
 parser.add_argument('--test_name', type=str, default='heldout_tables')
 parser.add_argument('--l1_loss_inputs', type=str, nargs='*',
@@ -218,15 +218,16 @@ max_len = opt.max_len
 def len_filter(example):
     return len(example.src) <= max_len and len(example.tgt) <= max_len
 
-task = get_task(opt.task)
-opt.train = task.train_path
-dev_paths = list(filter(lambda x: opt.test_name in x, task.test_paths))
-if len(dev_paths) <= 0:
-    raise ValueError('Test data with name %s not found' % (opt.test_name))
-elif len(dev_paths) == 1:
-    opt.dev = dev_paths[0]
-else:
-    raise ValueError('More than one test data with name %s was found' % (opt.test_name))
+if opt.task is not None:
+    task = get_task(opt.task)
+    opt.train = task.train_path
+    dev_paths = list(filter(lambda x: opt.test_name in x, task.test_paths))
+    if len(dev_paths) <= 0:
+        raise ValueError('Test data with name %s not found' % (opt.test_name))
+    elif len(dev_paths) == 1:
+        opt.dev = dev_paths[0]
+    else:
+        raise ValueError('More than one test data with name %s was found' % (opt.test_name))
 opt.full_attention_focus = 'yes' if TASK_DEFAULT_PARAMS[opt.default_params_key]['full_focus'] else 'no'
 opt.batch_size = TASK_DEFAULT_PARAMS[opt.default_params_key]['batch_size']
 opt.embedding_size = TASK_DEFAULT_PARAMS[opt.default_params_key]['embedding_size']
