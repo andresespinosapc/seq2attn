@@ -231,13 +231,15 @@ def len_filter(example):
 if opt.task is not None:
     task = get_task(opt.task)
     opt.train = task.train_path
-    dev_paths = list(filter(lambda x: opt.test_name in x, task.test_paths))
-    if len(dev_paths) <= 0:
-        raise ValueError('Test data with name %s not found' % (opt.test_name))
-    elif len(dev_paths) == 1:
-        opt.dev = dev_paths[0]
-    else:
-        raise ValueError('More than one test data with name %s was found' % (opt.test_name))
+    opt.dev = task.valid_path
+    opt.monitor = task.test_paths
+    # dev_paths = list(filter(lambda x: opt.test_name in x, task.test_paths))
+    # if len(dev_paths) <= 0:
+    #     raise ValueError('Test data with name %s not found' % (opt.test_name))
+    # elif len(dev_paths) == 1:
+    #     opt.dev = dev_paths[0]
+    # else:
+    #     raise ValueError('More than one test data with name %s was found' % (opt.test_name))
 
 def set_default_opt_if_exists(opt, opt_attr, params_attr):
     if TASK_DEFAULT_PARAMS[opt.default_params_key].get(params_attr) is not None:

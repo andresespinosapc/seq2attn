@@ -20,4 +20,16 @@ class CometLogger(Callback):
                 metrics.update({
                     '%s_%s' % (split, loss.log_name): loss.get_loss(),
                 })
+        for monitor_path, monitor_metrics in info['monitor_metrics'].items():
+            monitor_name = monitor_path.split('/')[-1].split('.')[0]
+            for metric in monitor_metrics:
+                metrics.update({
+                    '%s_%s' % (monitor_name, metric.log_name): metric.get_val(),
+                })
+        for monitor_path, monitor_losses in info['monitor_losses'].items():
+            monitor_name = monitor_path.split('/')[-1].split('.')[0]
+            for loss in monitor_losses:
+                metrics.update({
+                    '%s_%s' % (monitor_name, metric.log_name): loss.get_loss(),
+                })
         self.experiment.log_metrics(metrics)
