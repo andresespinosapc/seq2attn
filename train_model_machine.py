@@ -52,6 +52,16 @@ TASK_DEFAULT_PARAMS = {
         'patience': 5,
         'epochs': 20,
     },
+    'simple': {
+        'batch_size': 1,
+        'embedding_size': 256,
+        'hidden_size': 256,
+        'rnn_layers': 1,
+        'rnn_cell': 'gru',
+        'attention': 'pre-rnn',
+        'max_len': 50,
+        'dropout': 0.5,
+    },
     'Hupkes_2019_lookup_baseline': {
         'full_focus': True,
         'batch_size': 1,
@@ -88,7 +98,7 @@ TASK_DEFAULT_PARAMS = {
         'max_len': 50,
         'dropout': 0.5,
     },
-    'Hupkes_2019_SCAN_baseline': {
+    'Hupkes_2019_SCAN_seq2attn': {
         'full_focus': True,
         'batch_size': 1,
         'embedding_size': 512,
@@ -228,17 +238,36 @@ if opt.task is not None:
         opt.dev = dev_paths[0]
     else:
         raise ValueError('More than one test data with name %s was found' % (opt.test_name))
-opt.full_attention_focus = 'yes' if TASK_DEFAULT_PARAMS[opt.default_params_key]['full_focus'] else 'no'
-opt.batch_size = TASK_DEFAULT_PARAMS[opt.default_params_key]['batch_size']
-opt.embedding_size = TASK_DEFAULT_PARAMS[opt.default_params_key]['embedding_size']
-opt.hidden_size = TASK_DEFAULT_PARAMS[opt.default_params_key]['hidden_size']
-opt.n_layers = TASK_DEFAULT_PARAMS[opt.default_params_key]['rnn_layers']
-opt.rnn_cell = TASK_DEFAULT_PARAMS[opt.default_params_key]['rnn_cell']
-opt.attention = TASK_DEFAULT_PARAMS[opt.default_params_key]['attention']
-opt.attention_method = TASK_DEFAULT_PARAMS[opt.default_params_key]['attention_method']
-opt.dropout_p_encoder = TASK_DEFAULT_PARAMS[opt.default_params_key]['dropout']
-opt.dropout_p_decoder = TASK_DEFAULT_PARAMS[opt.default_params_key]['dropout']
-opt.max_len = TASK_DEFAULT_PARAMS[opt.default_params_key]['max_len']
+
+def set_default_opt_if_exists(opt, opt_attr, params_attr):
+    if TASK_DEFAULT_PARAMS[opt.default_params_key].get(params_attr) is not None:
+        if opt_attr == 'full_attention_focus':
+            setattr(opt, opt_attr, 'yes' if TASK_DEFAULT_PARAMS[opt.default_params_key][params_attr] else 'no')
+        else:
+            setattr(opt, opt_attr, TASK_DEFAULT_PARAMS[opt.default_params_key][params_attr])
+
+set_default_opt_if_exists(opt, 'full_attention_focus', 'full_focus')
+set_default_opt_if_exists(opt, 'batch_size', 'batch_size')
+set_default_opt_if_exists(opt, 'embedding_size', 'embedding_size')
+set_default_opt_if_exists(opt, 'hidden_size', 'hidden_size')
+set_default_opt_if_exists(opt, 'n_layers', 'rnn_layers')
+set_default_opt_if_exists(opt, 'rnn_cell', 'rnn_cell')
+set_default_opt_if_exists(opt, 'attention', 'attention')
+set_default_opt_if_exists(opt, 'attention_method', 'attention_method')
+set_default_opt_if_exists(opt, 'dropout_p_encoder', 'dropout')
+set_default_opt_if_exists(opt, 'dropout_p_decoder', 'dropout')
+set_default_opt_if_exists(opt, 'max_len', 'max_len')
+# opt.full_attention_focus = 'yes' if TASK_DEFAULT_PARAMS[opt.default_params_key]['full_focus'] else 'no'
+# opt.batch_size = TASK_DEFAULT_PARAMS[opt.default_params_key]['batch_size']
+# opt.embedding_size = TASK_DEFAULT_PARAMS[opt.default_params_key]['embedding_size']
+# opt.hidden_size = TASK_DEFAULT_PARAMS[opt.default_params_key]['hidden_size']
+# opt.n_layers = TASK_DEFAULT_PARAMS[opt.default_params_key]['rnn_layers']
+# opt.rnn_cell = TASK_DEFAULT_PARAMS[opt.default_params_key]['rnn_cell']
+# opt.attention = TASK_DEFAULT_PARAMS[opt.default_params_key]['attention']
+# opt.attention_method = TASK_DEFAULT_PARAMS[opt.default_params_key]['attention_method']
+# opt.dropout_p_encoder = TASK_DEFAULT_PARAMS[opt.default_params_key]['dropout']
+# opt.dropout_p_decoder = TASK_DEFAULT_PARAMS[opt.default_params_key]['dropout']
+# opt.max_len = TASK_DEFAULT_PARAMS[opt.default_params_key]['max_len']
 
 # generate training and testing data
 train = torchtext.data.TabularDataset(
