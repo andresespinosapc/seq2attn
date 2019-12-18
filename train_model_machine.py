@@ -59,59 +59,64 @@ TASK_DEFAULT_PARAMS = {
         'batch_size': 1,
         'embedding_size': 256,
         'hidden_size': 256,
-        'rnn_layers': 1,
+        'n_layers': 1,
         'rnn_cell': 'gru',
         'attention': 'pre-rnn',
         'max_len': 50,
-        'dropout': 0.5,
+        'dropout_p_encoder': 0.5,
+        'dropout_p_decoder': 0.5,
     },
     'Hupkes_2019_lookup_baseline': {
-        'full_focus': True,
+        'full_attention_focus': True,
         'batch_size': 1,
         'embedding_size': 128,
         'hidden_size': 512,
-        'rnn_layers': 1,
+        'n_layers': 1,
         'rnn_cell': 'gru',
         'attention': 'pre-rnn',
         'attention_method': 'mlp',
         'max_len': 50,
-        'dropout': 0.5,
+        'dropout_p_encoder': 0.5,
+        'dropout_p_decoder': 0.5,
     },
     'Hupkes_2019_lookup_seq2attn': {
-        'full_focus': True,
+        'full_attention_focus': True,
         'batch_size': 1,
         'embedding_size': 256,
         'hidden_size': 256,
-        'rnn_layers': 1,
+        'n_layers': 1,
         'rnn_cell': 'gru',
         'attention': 'pre-rnn',
         'attention_method': 'mlp',
         'max_len': 50,
-        'dropout': 0.5,
+        'dropout_p_encoder': 0.5,
+        'dropout_p_decoder': 0.5,
     },
     'Hupkes_2019_SCAN_baseline': {
-        'full_focus': True,
+        'full_attention_focus': True,
         'batch_size': 1,
         'embedding_size': 200,
         'hidden_size': 200,
-        'rnn_layers': 2,
+        'n_layers': 2,
         'rnn_cell': 'lstm',
         'attention': 'pre-rnn',
         'attention_method': 'mlp',
         'max_len': 50,
-        'dropout': 0.5,
+        'dropout_p_encoder': 0.5,
+        'dropout_p_decoder': 0.5,
     },
     'Hupkes_2019_SCAN_seq2attn': {
-        'full_focus': True,
+        'full_attention_focus': True,
         'batch_size': 1,
         'embedding_size': 512,
         'hidden_size': 512,
-        'rnn_layers': 1,
+        'n_layers': 1,
         'rnn_cell': 'gru',
         'attention': 'pre-rnn',
         'attention_method': 'mlp',
         'max_len': 50,
-        'dropout': 0.5,
+        'dropout_p_encoder': 0.5,
+        'dropout_p_decoder': 0.5,
     },
 }
 
@@ -150,23 +155,23 @@ parser.add_argument('--dev', help='Development data')
 parser.add_argument('--monitor', nargs='+', default=[], help='Data to monitor during training')
 parser.add_argument('--output_dir', default='../models', help='Path to model directory. If load_checkpoint is True, then path to checkpoint directory has to be provided')
 parser.add_argument('--epochs', type=int, help='Number of epochs', default=6)
-parser.add_argument('--optim', type=str, help='Choose optimizer', choices=['adam', 'adadelta', 'adagrad', 'adamax', 'rmsprop', 'sgd'])
-parser.add_argument('--max_len', type=int, help='Maximum sequence length', default=50)
+parser.add_argument('--optim', type=str, default='adam', help='Choose optimizer', choices=['adam', 'adadelta', 'adagrad', 'adamax', 'rmsprop', 'sgd'])
+parser.add_argument('--max_len', type=int, help='Maximum sequence length')
 parser.add_argument('--lower', action='store_true', help='Whether to lowercase the text in this field')
-parser.add_argument('--rnn_cell', type=str, help="Chose type of rnn cell", default='lstm')
+parser.add_argument('--rnn_cell', type=str, help="Chose type of rnn cell")
 parser.add_argument('--bidirectional', action='store_true', help="Flag for bidirectional encoder")
-parser.add_argument('--embedding_size', type=int, help='Embedding size', default=128)
-parser.add_argument('--hidden_size', type=int, help='Hidden layer size', default=128)
-parser.add_argument('--n_layers', type=int, help='Number of RNN layers in both encoder and decoder', default=1)
+parser.add_argument('--embedding_size', type=int, help='Embedding size')
+parser.add_argument('--hidden_size', type=int, help='Hidden layer size')
+parser.add_argument('--n_layers', type=int, help='Number of RNN layers in both encoder and decoder')
 parser.add_argument('--src_vocab', type=int, help='source vocabulary size', default=50000)
 parser.add_argument('--tgt_vocab', type=int, help='target vocabulary size', default=50000)
-parser.add_argument('--dropout_p_encoder', type=float, help='Dropout probability for the encoder', default=0.2)
-parser.add_argument('--dropout_p_decoder', type=float, help='Dropout probability for the decoder', default=0.2)
+parser.add_argument('--dropout_p_encoder', type=float, help='Dropout probability for the encoder')
+parser.add_argument('--dropout_p_decoder', type=float, help='Dropout probability for the decoder')
 parser.add_argument('--teacher_forcing_ratio', type=float, help='Teacher forcing ratio', default=0.2)
-parser.add_argument('--attention', choices=['pre-rnn'], default=False)
+parser.add_argument('--attention', choices=['pre-rnn'])
 parser.add_argument('--attention_method', choices=['dot', 'mlp', 'concat'], default=None)
 parser.add_argument('--metrics', nargs='+', default=['seq_acc'], choices=['word_acc', 'seq_acc', 'target_acc', 'sym_rwr_acc'], help='Metrics to use')
-parser.add_argument('--batch_size', type=int, help='Batch size', default=32)
+parser.add_argument('--batch_size', type=int, help='Batch size')
 parser.add_argument('--eval_batch_size', type=int, help='Batch size', default=128)
 parser.add_argument('--lr', type=float, help='Learning rate, recommended settings.\nrecommended settings: adam=0.001 adadelta=1.0 adamax=0.002 rmsprop=0.01 sgd=0.1', default=0.001)
 parser.add_argument('--ignore_output_eos', action='store_true', help='Ignore end of sequence token during training and evaluation')
@@ -185,7 +190,7 @@ parser.add_argument('--sample_infer', type=str, default='argmax', choices=['soft
 parser.add_argument('--initial_temperature', type=float, default=1., help='(Initial) temperature to use for Gumbel-Softmax or Softmax ST')
 parser.add_argument('--learn_temperature', type=str, default='no', choices=['no', 'latent', 'conditioned'], help='Whether the temperature should be a learnable parameter. And whether it should be conditioned')
 parser.add_argument('--attn_vals', type=str, choices=['outputs', 'embeddings'], default='outputs', help="Attend to hidden states or embeddings.")
-parser.add_argument('--full_attention_focus', choices=['yes', 'no'], default='no', help='Indicate whether to multiply the hidden state of the decoder with the context vector')
+parser.add_argument('--full_attention_focus', type=bool, help='Indicate whether to multiply the hidden state of the decoder with the context vector')
 
 opt = parser.parse_args()
 IGNORE_INDEX = -1
@@ -228,56 +233,26 @@ tgt = TargetField(include_eos=use_output_eos, lower=opt.lower)
 
 tabular_data_fields = [('src', src), ('tgt', tgt)]
 
-max_len = opt.max_len
-
-
-def len_filter(example):
-    return len(example.src) <= max_len and len(example.tgt) <= max_len
-
 if opt.task is not None:
     task = get_task(opt.task)
     opt.train = task.train_path
     opt.dev = task.valid_path
     opt.monitor = task.test_paths
-    # dev_paths = list(filter(lambda x: opt.test_name in x, task.test_paths))
-    # if len(dev_paths) <= 0:
-    #     raise ValueError('Test data with name %s not found' % (opt.test_name))
-    # elif len(dev_paths) == 1:
-    #     opt.dev = dev_paths[0]
-    # else:
-    #     raise ValueError('More than one test data with name %s was found' % (opt.test_name))
 
-def set_default_opt_if_exists(opt, opt_attr, params_attr):
-    if TASK_DEFAULT_PARAMS[opt.default_params_key].get(params_attr) is not None:
-        if opt_attr == 'full_attention_focus':
-            setattr(opt, opt_attr, 'yes' if TASK_DEFAULT_PARAMS[opt.default_params_key][params_attr] else 'no')
-        else:
-            setattr(opt, opt_attr, TASK_DEFAULT_PARAMS[opt.default_params_key][params_attr])
+for key, value in TASK_DEFAULT_PARAMS[opt.default_params_key].items():
+    if key not in opt.__dict__:
+        raise ValueError('Param %s not in argparse options' % (key))
+    if getattr(opt, key) is not None:
+        raise ValueError('Cannot set default param %s if argparse option is not None' % (key))
 
-set_default_opt_if_exists(opt, 'full_attention_focus', 'full_focus')
-set_default_opt_if_exists(opt, 'batch_size', 'batch_size')
-set_default_opt_if_exists(opt, 'embedding_size', 'embedding_size')
-set_default_opt_if_exists(opt, 'hidden_size', 'hidden_size')
-set_default_opt_if_exists(opt, 'n_layers', 'rnn_layers')
-set_default_opt_if_exists(opt, 'rnn_cell', 'rnn_cell')
-set_default_opt_if_exists(opt, 'attention', 'attention')
-set_default_opt_if_exists(opt, 'attention_method', 'attention_method')
-set_default_opt_if_exists(opt, 'dropout_p_encoder', 'dropout')
-set_default_opt_if_exists(opt, 'dropout_p_decoder', 'dropout')
-set_default_opt_if_exists(opt, 'max_len', 'max_len')
-# opt.full_attention_focus = 'yes' if TASK_DEFAULT_PARAMS[opt.default_params_key]['full_focus'] else 'no'
-# opt.batch_size = TASK_DEFAULT_PARAMS[opt.default_params_key]['batch_size']
-# opt.embedding_size = TASK_DEFAULT_PARAMS[opt.default_params_key]['embedding_size']
-# opt.hidden_size = TASK_DEFAULT_PARAMS[opt.default_params_key]['hidden_size']
-# opt.n_layers = TASK_DEFAULT_PARAMS[opt.default_params_key]['rnn_layers']
-# opt.rnn_cell = TASK_DEFAULT_PARAMS[opt.default_params_key]['rnn_cell']
-# opt.attention = TASK_DEFAULT_PARAMS[opt.default_params_key]['attention']
-# opt.attention_method = TASK_DEFAULT_PARAMS[opt.default_params_key]['attention_method']
-# opt.dropout_p_encoder = TASK_DEFAULT_PARAMS[opt.default_params_key]['dropout']
-# opt.dropout_p_decoder = TASK_DEFAULT_PARAMS[opt.default_params_key]['dropout']
-# opt.max_len = TASK_DEFAULT_PARAMS[opt.default_params_key]['max_len']
+    setattr(opt, key, value)
 
 log_comet_parameters(opt)
+
+max_len = opt.max_len
+
+def len_filter(example):
+    return len(example.src) <= max_len and len(example.tgt) <= max_len
 
 # generate training and testing data
 train = torchtext.data.TabularDataset(
