@@ -213,7 +213,6 @@ if opt.attention:
         logging.info("No attention method provided. Using DOT method.")
         opt.attention_method = 'dot'
 
-log_comet_parameters(opt)
 # Set random seed
 if opt.random_seed:
     random.seed(opt.random_seed)
@@ -278,6 +277,8 @@ set_default_opt_if_exists(opt, 'max_len', 'max_len')
 # opt.dropout_p_decoder = TASK_DEFAULT_PARAMS[opt.default_params_key]['dropout']
 # opt.max_len = TASK_DEFAULT_PARAMS[opt.default_params_key]['max_len']
 
+log_comet_parameters(opt)
+
 # generate training and testing data
 train = torchtext.data.TabularDataset(
     path=opt.train, format='tsv',
@@ -285,7 +286,6 @@ train = torchtext.data.TabularDataset(
     filter_pred=len_filter
 )
 train = get_standard_iter(train, batch_size=opt.batch_size)
-
 if opt.dev:
     dev = torchtext.data.TabularDataset(
         path=opt.dev, format='tsv',
