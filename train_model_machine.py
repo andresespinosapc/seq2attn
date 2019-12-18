@@ -27,7 +27,10 @@ from machine.util.checkpoint import Checkpoint
 
 import random
 import numpy as np
-from machine.tasks import get_task
+# from machine.tasks import get_task
+import sys
+sys.path.insert(0, os.path.abspath('../machine-tasks'))
+from tasks import get_task
 from loss import L1Loss
 
 comet_args = {
@@ -131,7 +134,11 @@ parser.add_argument('--task', type=str, choices=[
     'noisy_long_lookup_single',
     'long_lookup_intermediate_noise',
     'symbol_rewriting',
-    'SCAN'])
+    'SCAN_simple',
+    'SCAN_length',
+    'SCAN_addprim_turn_left',
+    'SCAN_addprim_jump',
+    ])
 parser.add_argument('--default_params_key', type=str, choices=list(TASK_DEFAULT_PARAMS.keys()), default='task_defaults')
 parser.add_argument('--test_name', type=str, default='heldout_tables')
 parser.add_argument('--l1_loss_inputs', type=str, nargs='*',
