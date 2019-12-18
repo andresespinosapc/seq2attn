@@ -67,7 +67,8 @@ TASK_DEFAULT_PARAMS = {
         'dropout_p_decoder': 0.5,
     },
     'Hupkes_2019_lookup_baseline': {
-        'full_attention_focus': True,
+        'full_attention_focus': False,
+        'attn_vals': 'outputs',
         'batch_size': 1,
         'embedding_size': 128,
         'hidden_size': 512,
@@ -81,6 +82,7 @@ TASK_DEFAULT_PARAMS = {
     },
     'Hupkes_2019_lookup_seq2attn': {
         'full_attention_focus': True,
+        'attn_vals': 'embeddings',
         'batch_size': 1,
         'embedding_size': 256,
         'hidden_size': 256,
@@ -93,7 +95,8 @@ TASK_DEFAULT_PARAMS = {
         'dropout_p_decoder': 0.5,
     },
     'Hupkes_2019_SCAN_baseline': {
-        'full_attention_focus': True,
+        'full_attention_focus': False,
+        'attn_vals': 'outputs',
         'batch_size': 1,
         'embedding_size': 200,
         'hidden_size': 200,
@@ -107,6 +110,7 @@ TASK_DEFAULT_PARAMS = {
     },
     'Hupkes_2019_SCAN_seq2attn': {
         'full_attention_focus': True,
+        'attn_vals': 'embeddings',
         'batch_size': 1,
         'embedding_size': 512,
         'hidden_size': 512,
@@ -145,7 +149,6 @@ parser.add_argument('--task', type=str, choices=[
     'SCAN_addprim_jump',
     ])
 parser.add_argument('--default_params_key', type=str, choices=list(TASK_DEFAULT_PARAMS.keys()), default='task_defaults')
-parser.add_argument('--test_name', type=str, default='heldout_tables')
 parser.add_argument('--l1_loss_inputs', type=str, nargs='*',
     choices=['encoder_hidden', 'model_parameters'], default=[])
 parser.add_argument('--scale_l1_loss', type=float, default=1.)
@@ -189,10 +192,29 @@ parser.add_argument('--sample_train', type=str, default='gumbel_st', choices=['s
 parser.add_argument('--sample_infer', type=str, default='argmax', choices=['softmax', 'softmax_st', 'gumbel', 'gumbel_st', 'sparsemax', 'argmax'], help='During testing, activate the attention vector using Softmax (ST), Gumbel-Softmax (ST), argmax or Sparsemax')
 parser.add_argument('--initial_temperature', type=float, default=1., help='(Initial) temperature to use for Gumbel-Softmax or Softmax ST')
 parser.add_argument('--learn_temperature', type=str, default='no', choices=['no', 'latent', 'conditioned'], help='Whether the temperature should be a learnable parameter. And whether it should be conditioned')
-parser.add_argument('--attn_vals', type=str, choices=['outputs', 'embeddings'], default='outputs', help="Attend to hidden states or embeddings.")
+parser.add_argument('--attn_vals', type=str, choices=['outputs', 'embeddings'], help="Attend to hidden states or embeddings.")
 parser.add_argument('--full_attention_focus', type=bool, help='Indicate whether to multiply the hidden state of the decoder with the context vector')
 
 opt = parser.parse_args()
+
+if opt.task is not None:
+    task = get_task(opt.task)
+    opt.train = task.train_path
+    opt.dev = task.valid_path
+    opt.monitor = task.test_paths
+
+for key, value in TASK_DEFAULT_PARAMS[opt.default_params_key].items():
+    if key not in opt.__dict__:
+        raise ValueError('Param %s not in argparse options' % (key))
+    if getattr(opt, key) is None:
+        setattr(opt, key, value)
+    else:
+        logging.info('Overriding default parameter %s value %s with %s' % (
+            key, value, getattr(opt, key),
+        ))
+
+log_comet_parameters(opt)
+
 IGNORE_INDEX = -1
 use_output_eos = not opt.ignore_output_eos
 
@@ -232,22 +254,6 @@ src = SourceField(lower=opt.lower)
 tgt = TargetField(include_eos=use_output_eos, lower=opt.lower)
 
 tabular_data_fields = [('src', src), ('tgt', tgt)]
-
-if opt.task is not None:
-    task = get_task(opt.task)
-    opt.train = task.train_path
-    opt.dev = task.valid_path
-    opt.monitor = task.test_paths
-
-for key, value in TASK_DEFAULT_PARAMS[opt.default_params_key].items():
-    if key not in opt.__dict__:
-        raise ValueError('Param %s not in argparse options' % (key))
-    if getattr(opt, key) is not None:
-        raise ValueError('Cannot set default param %s if argparse option is not None' % (key))
-
-    setattr(opt, key, value)
-
-log_comet_parameters(opt)
 
 max_len = opt.max_len
 
