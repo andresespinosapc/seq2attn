@@ -32,7 +32,7 @@ def _gumbel_softmax_sample(logits, invalid_action_mask, gumbel, tau, eps):
     # but only the ones indicated by the mask.
     # We expect here that y has already been masked with -inf with the same mask
     tau = tau.expand_as(y).contiguous()
-    tau.masked_fill_(mask=invalid_action_mask, value=1)
+    tau = tau.masked_fill(mask=invalid_action_mask, value=1)
 
     return softmax(y / tau, dims - 1)
 
