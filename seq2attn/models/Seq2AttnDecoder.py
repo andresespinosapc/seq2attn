@@ -86,7 +86,7 @@ class Seq2AttnDecoder(nn.Module):
                  initial_temperature=None,
                  learn_temperature=None,
                  attn_vals=None,
-                 full_attention_focus='no'):
+                 full_attention_focus=False):
         super(Seq2AttnDecoder, self).__init__()
 
         # Store values
@@ -98,7 +98,7 @@ class Seq2AttnDecoder(nn.Module):
         self.n_layers = n_layers
         self.eos_id = eos_id
         self.sos_id = sos_id
-        self.full_attention_focus = (full_attention_focus == 'yes')
+        self.full_attention_focus = full_attention_focus
 
         # Get type of RNN cell
         rnn_cell = rnn_cell.lower()
