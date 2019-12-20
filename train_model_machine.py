@@ -152,6 +152,7 @@ parser.add_argument('--default_params_key', type=str, choices=list(TASK_DEFAULT_
 parser.add_argument('--l1_loss_inputs', type=str, nargs='*',
     choices=['encoder_hidden', 'model_parameters'], default=[])
 parser.add_argument('--scale_l1_loss', type=float, default=1.)
+parser.add_argument('--auto_print_every', action='store_true')
 
 parser.add_argument('--train', help='Training data')
 parser.add_argument('--dev', help='Development data')
@@ -267,6 +268,10 @@ train = torchtext.data.TabularDataset(
     filter_pred=len_filter
 )
 train = get_standard_iter(train, batch_size=opt.batch_size)
+
+if opt.auto_print_every:
+    opt.print_every = int(len(train) / 2)
+
 if opt.dev:
     dev = torchtext.data.TabularDataset(
         path=opt.dev, format='tsv',
