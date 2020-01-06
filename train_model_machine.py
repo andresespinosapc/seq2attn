@@ -1,6 +1,6 @@
 """Train Seq2Attn model."""
 
-from comet_ml import Experiment
+from comet_ml import Experiment, OfflineExperiment
 from callbacks import CometLogger
 
 import argparse
@@ -40,7 +40,12 @@ comet_args = {
 if os.environ.get('COMET_DISABLE'):
     comet_args['disabled'] = True
     comet_args['api_key'] = ''
-experiment = Experiment(**comet_args)
+if os.environ.get('COMET_OFFLINE'):
+    comet_args['api_key'] = ''
+    comet_args['offline_directory'] = 'comet_offline'
+    experiment = OfflineExperiment(**comet_args)
+else:
+    experiment = Experiment(**comet_args)
 
 def log_comet_parameters(opt):
     opt_dict = vars(opt)
