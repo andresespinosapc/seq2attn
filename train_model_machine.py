@@ -396,7 +396,8 @@ if 'sym_rwr_acc' in opt.metrics:
 checkpoint_path = os.path.join(opt.output_dir, opt.load_checkpoint) if opt.resume else None
 
 # create trainer
-t = SupervisedTrainer(expt_dir=opt.output_dir)
+expt_dir = os.path.join(opt.output_dir, experiment.get_key())
+t = SupervisedTrainer(expt_dir=expt_dir)
 
 seq2seq, logs = t.train(model=seq2seq,
                         data=train,
