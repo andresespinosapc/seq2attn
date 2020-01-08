@@ -3,7 +3,7 @@ import torch
 
 
 class L1Loss(Loss):
-    def __init__(self, input_name='encoding_hidden'):
+    def __init__(self, input_name='encoder_hidden'):
         self.name = 'L1 %s Loss' % (input_name)
         self.log_name = 'l1_%s_loss' % (input_name)
         self.inputs = input_name
