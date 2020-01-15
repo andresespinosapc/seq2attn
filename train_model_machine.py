@@ -200,6 +200,7 @@ parser.add_argument('--initial_temperature', type=float, default=1., help='(Init
 parser.add_argument('--learn_temperature', type=str, default='no', choices=['no', 'latent', 'conditioned'], help='Whether the temperature should be a learnable parameter. And whether it should be conditioned')
 parser.add_argument('--attn_vals', type=str, choices=['outputs', 'embeddings'], help="Attend to hidden states or embeddings.")
 parser.add_argument('--full_attention_focus', type=bool, help='Indicate whether to multiply the hidden state of the decoder with the context vector')
+parser.add_argument('--output_value', type=str, choices=['decoder_output', 'context'], help='Which is the output vector of the decoder')
 
 opt = parser.parse_args()
 
@@ -349,7 +350,8 @@ else:
                          initial_temperature=opt.initial_temperature,
                          learn_temperature=opt.learn_temperature,
                          attn_vals=opt.attn_vals,
-                         full_attention_focus=opt.full_attention_focus)
+                         full_attention_focus=opt.full_attention_focus,
+                         output_value=opt.output_value)
     seq2seq = Seq2seq(seq2attn_encoder, decoder)
     seq2seq.to(device)
 
