@@ -86,7 +86,8 @@ class Seq2AttnDecoder(nn.Module):
                  initial_temperature=None,
                  learn_temperature=None,
                  attn_vals=None,
-                 full_attention_focus=False):
+                 full_attention_focus=False,
+                 output_value='decoder_output'):
         super(Seq2AttnDecoder, self).__init__()
 
         # Store values
@@ -99,6 +100,7 @@ class Seq2AttnDecoder(nn.Module):
         self.eos_id = eos_id
         self.sos_id = sos_id
         self.full_attention_focus = full_attention_focus
+        self.output_value = output_value
 
         # Get type of RNN cell
         rnn_cell = rnn_cell.lower()
@@ -238,7 +240,12 @@ class Seq2AttnDecoder(nn.Module):
                                   decoder_hidden[1] * context.transpose(0, 1))
         decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
 
-        output = decoder_output
+        if self.output_value == 'decoder_output':
+            output = decoder_output
+        elif self.output_value == 'context':
+            output = context
+        else:
+            raise ValueError('Invalid output_value %s' % (self.output_value))
 
         return output, transcoder_hidden, decoder_hidden, attn
 
