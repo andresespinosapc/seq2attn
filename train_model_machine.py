@@ -14,6 +14,7 @@ import torchtext
 from seq2attn.models import EncoderRNN
 from seq2attn.models import Seq2AttnDecoder
 from seq2attn.models import Seq2seq
+from seq2attn.models import Transformer
 
 from machine.dataset import SourceField, get_standard_iter
 from machine.dataset import TargetField
@@ -158,6 +159,7 @@ parser.add_argument('--l1_loss_inputs', type=str, nargs='*',
     choices=['encoder_hidden', 'model_parameters'], default=[])
 parser.add_argument('--scale_l1_loss', type=float, default=1.)
 parser.add_argument('--auto_print_every', action='store_true')
+parser.add_argument('--model', type=str, default='seq2attn', choices=['seq2attn', 'transformer'])
 
 parser.add_argument('--train', help='Training data')
 parser.add_argument('--dev', help='Development data')
@@ -200,7 +202,7 @@ parser.add_argument('--initial_temperature', type=float, default=1., help='(Init
 parser.add_argument('--learn_temperature', type=str, default='no', choices=['no', 'latent', 'conditioned'], help='Whether the temperature should be a learnable parameter. And whether it should be conditioned')
 parser.add_argument('--attn_vals', type=str, choices=['outputs', 'embeddings'], help="Attend to hidden states or embeddings.")
 parser.add_argument('--full_attention_focus', type=bool, help='Indicate whether to multiply the hidden state of the decoder with the context vector')
-parser.add_argument('--output_value', type=str, choices=['decoder_output', 'context'], help='Which is the output vector of the decoder')
+parser.add_argument('--output_value', type=str, default='decoder_output', choices=['decoder_output', 'context'], help='Which is the output vector of the decoder')
 
 opt = parser.parse_args()
 
@@ -323,36 +325,43 @@ else:
     output_vocab = tgt.vocab
 
     # Initialize model
-    hidden_size = opt.hidden_size
-    decoder_hidden_size = hidden_size*2 if opt.bidirectional else hidden_size
-    seq2attn_encoder = EncoderRNN(len(src.vocab),
-                                  max_len,
-                                  hidden_size,
-                                  opt.embedding_size,
-                                  dropout_p=opt.dropout_p_encoder,
-                                  n_layers=opt.n_layers,
-                                  bidirectional=opt.bidirectional,
-                                  rnn_cell=opt.rnn_cell,
-                                  variable_lengths=True)
-    decoder = Seq2AttnDecoder(
-                         len(tgt.vocab), max_len, decoder_hidden_size,
-                         dropout_p=opt.dropout_p_decoder,
-                         n_layers=opt.n_layers,
-                         use_attention=opt.attention,
-                         attention_method=opt.attention_method,
-                         bidirectional=opt.bidirectional,
-                         rnn_cell=opt.rnn_cell,
-                         eos_id=tgt.eos_id,
-                         sos_id=tgt.sos_id,
-                         embedding_dim=opt.embedding_size,
-                         sample_train=opt.sample_train,
-                         sample_infer=opt.sample_infer,
-                         initial_temperature=opt.initial_temperature,
-                         learn_temperature=opt.learn_temperature,
-                         attn_vals=opt.attn_vals,
-                         full_attention_focus=opt.full_attention_focus,
-                         output_value=opt.output_value)
-    seq2seq = Seq2seq(seq2attn_encoder, decoder)
+    if opt.model == 'seq2attn':
+        hidden_size = opt.hidden_size
+        decoder_hidden_size = hidden_size*2 if opt.bidirectional else hidden_size
+        seq2attn_encoder = EncoderRNN(len(src.vocab),
+                                    max_len,
+                                    hidden_size,
+                                    opt.embedding_size,
+                                    dropout_p=opt.dropout_p_encoder,
+                                    n_layers=opt.n_layers,
+                                    bidirectional=opt.bidirectional,
+                                    rnn_cell=opt.rnn_cell,
+                                    variable_lengths=True)
+        decoder = Seq2AttnDecoder(
+                            len(tgt.vocab), max_len, decoder_hidden_size,
+                            dropout_p=opt.dropout_p_decoder,
+                            n_layers=opt.n_layers,
+                            use_attention=opt.attention,
+                            attention_method=opt.attention_method,
+                            bidirectional=opt.bidirectional,
+                            rnn_cell=opt.rnn_cell,
+                            eos_id=tgt.eos_id,
+                            sos_id=tgt.sos_id,
+                            embedding_dim=opt.embedding_size,
+                            sample_train=opt.sample_train,
+                            sample_infer=opt.sample_infer,
+                            initial_temperature=opt.initial_temperature,
+                            learn_temperature=opt.learn_temperature,
+                            attn_vals=opt.attn_vals,
+                            full_attention_focus=opt.full_attention_focus,
+                            output_value=opt.output_value)
+        seq2seq = Seq2seq(seq2attn_encoder, decoder)
+    elif opt.model == 'transformer':
+        seq2seq = Transformer(
+            src_vocab_size=len(src.vocab),
+            tgt_vocab_size=len(tgt.vocab),
+            ignore_index=output_vocab.stoi[tgt.pad_token],
+        )
     seq2seq.to(device)
 
     for param in seq2seq.named_parameters():
