@@ -207,6 +207,7 @@ parser.add_argument('--learn_temperature', type=str, default='no', choices=['no'
 parser.add_argument('--attn_vals', type=str, choices=['outputs', 'embeddings'], help="Attend to hidden states or embeddings.")
 parser.add_argument('--full_attention_focus', type=bool, help='Indicate whether to multiply the hidden state of the decoder with the context vector')
 parser.add_argument('--output_value', type=str, default='decoder_output', choices=['decoder_output', 'context'], help='Which is the output vector of the decoder')
+parser.add_argument('--transcoder_hidden_activation', type=str, default=None, choices=['gumbel_st'], help='Which is the output vector of the decoder')
 
 opt = parser.parse_args()
 
@@ -358,7 +359,8 @@ else:
                             learn_temperature=opt.learn_temperature,
                             attn_vals=opt.attn_vals,
                             full_attention_focus=opt.full_attention_focus,
-                            output_value=opt.output_value)
+                            output_value=opt.output_value,
+                            transcoder_hidden_activation=opt.transcoder_hidden_activation)
         seq2seq = Seq2seq(seq2attn_encoder, decoder)
     elif opt.model == 'transformer':
         seq2seq = Transformer(

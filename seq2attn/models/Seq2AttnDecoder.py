@@ -87,7 +87,8 @@ class Seq2AttnDecoder(nn.Module):
                  learn_temperature=None,
                  attn_vals=None,
                  full_attention_focus=False,
-                 output_value='decoder_output'):
+                 output_value='decoder_output',
+                 transcoder_hidden_activation=None):
         super(Seq2AttnDecoder, self).__init__()
 
         # Store values
@@ -101,6 +102,14 @@ class Seq2AttnDecoder(nn.Module):
         self.sos_id = sos_id
         self.full_attention_focus = full_attention_focus
         self.output_value = output_value
+        self.transcoder_hidden_activation = transcoder_hidden_activation
+        if transcoder_hidden_activation is not None:
+            self.inv_out = nn.Linear(vocab_size, hidden_size)
+            self.transcoder_hidden_activation = AttentionActivation(
+                sample_train=transcoder_hidden_activation,
+                sample_infer='argmax',
+                learn_temperature='no',
+                initial_temperature=initial_temperature)
 
         # Get type of RNN cell
         rnn_cell = rnn_cell.lower()
@@ -227,7 +236,16 @@ class Seq2AttnDecoder(nn.Module):
             list(torch.tensor): List of length max_output_length containing the selected actions
 
         """
+        if self.transcoder_hidden_activation is not None:
+            transcoder_hidden = self.inv_out(transcoder_hidden)
         transcoder_output, transcoder_hidden = self.transcoder(embedded, transcoder_hidden)
+        if self.transcoder_hidden_activation is not None:
+            transcoder_hidden = self.out(transcoder_hidden)
+            mask = torch.zeros_like(transcoder_hidden, dtype=torch.bool)
+            transcoder_hidden = self.transcoder_hidden_activation(
+                transcoder_hidden, mask, None
+            )
+
         context, attn = self.attention(queries=transcoder_output, keys=attn_keys, values=attn_vals,
                                        **kwargs)
         decoder_input = torch.cat((context, embedded), dim=2)
@@ -306,6 +324,8 @@ class Seq2AttnDecoder(nn.Module):
                                                              teacher_forcing_ratio)
 
         transcoder_hidden = self._init_state(encoder_hidden, 'encoder')
+        if self.transcoder_hidden_activation is not None:
+            transcoder_hidden = self.out(transcoder_hidden)
         decoder_hidden = self._init_state(encoder_hidden, 'new')
 
         use_teacher_forcing = True if random.random() < teacher_forcing_ratio else False
