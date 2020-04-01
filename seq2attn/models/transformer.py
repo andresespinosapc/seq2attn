@@ -71,9 +71,9 @@ class Transformer(nn.Module):
         tgt = self.pos_encoder(tgt)
 
         batch_size, src_max_len, _ = src.shape
-        src_pad_mask = torch.arange(src_max_len).expand(batch_size, src_max_len) >= input_lengths.unsqueeze(1)
+        src_pad_mask = torch.arange(src_max_len).expand(batch_size, src_max_len).to(self.device) >= input_lengths.unsqueeze(1)
         tgt_max_len = tgt.shape[1]
-        tgt_subsequent_mask = self.inner_transformer.generate_square_subsequent_mask(tgt_max_len)
+        tgt_subsequent_mask = self.inner_transformer.generate_square_subsequent_mask(tgt_max_len).to(self.device)
 
         output = self.inner_transformer(
             src.transpose(0, 1),
