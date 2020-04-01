@@ -74,6 +74,7 @@ TASK_DEFAULT_PARAMS = {
     },
     'Hupkes_2019_lookup_baseline': {
         'full_attention_focus': False,
+        'sample_train': 'softmax',
         'attn_vals': 'outputs',
         'batch_size': 1,
         'embedding_size': 128,
@@ -88,6 +89,7 @@ TASK_DEFAULT_PARAMS = {
     },
     'Hupkes_2019_lookup_seq2attn': {
         'full_attention_focus': True,
+        'sample_train': 'gumbel_st',
         'attn_vals': 'embeddings',
         'batch_size': 1,
         'embedding_size': 256,
@@ -102,6 +104,7 @@ TASK_DEFAULT_PARAMS = {
     },
     'Hupkes_2019_SCAN_baseline': {
         'full_attention_focus': False,
+        'sample_train': 'softmax',
         'attn_vals': 'outputs',
         'batch_size': 1,
         'embedding_size': 200,
@@ -116,6 +119,7 @@ TASK_DEFAULT_PARAMS = {
     },
     'Hupkes_2019_SCAN_seq2attn': {
         'full_attention_focus': True,
+        'sample_train': 'gumbel_st',
         'attn_vals': 'embeddings',
         'batch_size': 1,
         'embedding_size': 512,
@@ -196,7 +200,7 @@ parser.add_argument('--write-logs', help='Specify file to write logs to after tr
 parser.add_argument('--cuda_device', default=0, type=int, help='set cuda device to use')
 
 # Arguments for the Seq2Attn model
-parser.add_argument('--sample_train', type=str, default='gumbel_st', choices=['softmax', 'softmax_st', 'gumbel', 'gumbel_st', 'sparsemax'], help='During training, activate the attention vector using Softmax (ST), Gumbel-Softmax (ST) or Sparsemax')
+parser.add_argument('--sample_train', type=str, choices=['softmax', 'softmax_st', 'gumbel', 'gumbel_st', 'sparsemax'], help='During training, activate the attention vector using Softmax (ST), Gumbel-Softmax (ST) or Sparsemax')
 parser.add_argument('--sample_infer', type=str, default='argmax', choices=['softmax', 'softmax_st', 'gumbel', 'gumbel_st', 'sparsemax', 'argmax'], help='During testing, activate the attention vector using Softmax (ST), Gumbel-Softmax (ST), argmax or Sparsemax')
 parser.add_argument('--initial_temperature', type=float, default=1., help='(Initial) temperature to use for Gumbel-Softmax or Softmax ST')
 parser.add_argument('--learn_temperature', type=str, default='no', choices=['no', 'latent', 'conditioned'], help='Whether the temperature should be a learnable parameter. And whether it should be conditioned')
