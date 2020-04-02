@@ -105,11 +105,12 @@ class Seq2AttnDecoder(nn.Module):
         self.transcoder_hidden_activation = transcoder_hidden_activation
         if transcoder_hidden_activation is not None:
             self.inv_out = nn.Linear(vocab_size, hidden_size)
-            self.transcoder_hidden_activation = AttentionActivation(
-                sample_train=transcoder_hidden_activation,
-                sample_infer='argmax',
-                learn_temperature='no',
-                initial_temperature=initial_temperature)
+            if transcoder_hidden_activation != 'none':
+                self.transcoder_hidden_activation = AttentionActivation(
+                    sample_train=transcoder_hidden_activation,
+                    sample_infer='argmax',
+                    learn_temperature=learn_temperature,
+                    initial_temperature=initial_temperature)
 
         # Get type of RNN cell
         rnn_cell = rnn_cell.lower()
@@ -241,10 +242,11 @@ class Seq2AttnDecoder(nn.Module):
         transcoder_output, transcoder_hidden = self.transcoder(embedded, transcoder_hidden)
         if self.transcoder_hidden_activation is not None:
             transcoder_hidden = self.out(transcoder_hidden)
-            mask = torch.zeros_like(transcoder_hidden, dtype=torch.bool)
-            transcoder_hidden = self.transcoder_hidden_activation(
-                transcoder_hidden, mask, None
-            )
+            if self.transcoder_hidden_activation != 'none':
+                mask = torch.zeros_like(transcoder_hidden, dtype=torch.bool)
+                transcoder_hidden = self.transcoder_hidden_activation(
+                    transcoder_hidden, mask, None
+                )
 
         context, attn = self.attention(queries=transcoder_output, keys=attn_keys, values=attn_vals,
                                        **kwargs)

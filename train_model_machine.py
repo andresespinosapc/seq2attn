@@ -207,7 +207,7 @@ parser.add_argument('--learn_temperature', type=str, default='no', choices=['no'
 parser.add_argument('--attn_vals', type=str, choices=['outputs', 'embeddings'], help="Attend to hidden states or embeddings.")
 parser.add_argument('--full_attention_focus', type=bool, help='Indicate whether to multiply the hidden state of the decoder with the context vector')
 parser.add_argument('--output_value', type=str, default='decoder_output', choices=['decoder_output', 'context'], help='Which is the output vector of the decoder')
-parser.add_argument('--transcoder_hidden_activation', type=str, default=None, choices=['gumbel_st'], help='Which is the output vector of the decoder')
+parser.add_argument('--transcoder_hidden_activation', type=str, default=None, choices=['none', 'gumbel_st'], help='Which is the output vector of the decoder')
 
 opt = parser.parse_args()
 
