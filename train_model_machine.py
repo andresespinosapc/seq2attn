@@ -210,7 +210,7 @@ parser.add_argument('--initial_temperature', type=float, default=1., help='(Init
 parser.add_argument('--learn_temperature', type=str, default='no', choices=['no', 'latent', 'conditioned'], help='Whether the temperature should be a learnable parameter. And whether it should be conditioned')
 parser.add_argument('--attn_vals', type=str, choices=['outputs', 'embeddings'], help="Attend to hidden states or embeddings.")
 parser.add_argument('--full_attention_focus', type=bool, help='Indicate whether to multiply the hidden state of the decoder with the context vector')
-parser.add_argument('--output_value', type=str, default='decoder_output', choices=['decoder_output', 'context'], help='Which is the output vector of the decoder')
+parser.add_argument('--output_value', type=str, default=None, choices=['decoder_output', 'context'], help='Which is the output vector of the decoder')
 parser.add_argument('--transcoder_hidden_activation', type=str, default=None, choices=['none', 'gumbel_st'], help='Apply an activation to the transcoder hidden state in every step')
 parser.add_argument('--tha_initial_temperature', type=float, default=1., help='(Initial) temperature to use for Gumbel-Softmax or Softmax ST')
 
@@ -254,6 +254,7 @@ if opt.attention and not opt.attention_method:
 
 if opt.exp_name is None and not comet_args['disabled']:
     parser.error('Please provide exp_name if logging to CometML')
+experiment.set_name(opt.exp_name)
 
 if torch.cuda.is_available():
         logging.info("Cuda device set to %i" % opt.cuda_device)
