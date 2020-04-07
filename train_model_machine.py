@@ -210,8 +210,11 @@ parser.add_argument('--initial_temperature', type=float, default=1., help='(Init
 parser.add_argument('--learn_temperature', type=str, default='no', choices=['no', 'latent', 'conditioned'], help='Whether the temperature should be a learnable parameter. And whether it should be conditioned')
 parser.add_argument('--attn_vals', type=str, choices=['outputs', 'embeddings'], help="Attend to hidden states or embeddings.")
 parser.add_argument('--full_attention_focus', type=bool, help='Indicate whether to multiply the hidden state of the decoder with the context vector')
-parser.add_argument('--output_value', type=str, default='decoder_output', choices=['decoder_output', 'context'], help='Which is the output vector of the decoder')
-parser.add_argument('--transcoder_hidden_activation', type=str, default=None, choices=['none', 'gumbel_st'], help='Which is the output vector of the decoder')
+parser.add_argument('--output_value', type=str, default=None, choices=['decoder_output', 'context'], help='Which is the output vector of the decoder')
+parser.add_argument('--transcoder_hidden_activation', type=str, default=None, choices=['none', 'gumbel_st'], help='Apply an activation to the transcoder hidden state in every step')
+parser.add_argument('--tha_initial_temperature', type=float, default=1., help='(Initial) temperature to use for Gumbel-Softmax or Softmax ST')
+
+parser.add_argument('--exp_name', type=str, default=None, help='Experiment name for CometML logging')
 
 opt = parser.parse_args()
 
@@ -248,6 +251,10 @@ if not opt.attention and opt.attention_method:
 
 if opt.attention and not opt.attention_method:
     parser.error("Attention turned on, but no attention method provided")
+
+if opt.exp_name is None and not comet_args['disabled']:
+    parser.error('Please provide exp_name if logging to CometML')
+experiment.set_name(opt.exp_name)
 
 if torch.cuda.is_available():
         logging.info("Cuda device set to %i" % opt.cuda_device)
@@ -364,7 +371,8 @@ else:
                             attn_vals=opt.attn_vals,
                             full_attention_focus=opt.full_attention_focus,
                             output_value=opt.output_value,
-                            transcoder_hidden_activation=opt.transcoder_hidden_activation)
+                            transcoder_hidden_activation=opt.transcoder_hidden_activation,
+                            tha_initial_temperature=opt.tha_initial_temperature)
         seq2seq = Seq2seq(seq2attn_encoder, decoder)
     elif opt.model == 'transformer':
         seq2seq = Transformer(

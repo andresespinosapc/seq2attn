@@ -88,7 +88,8 @@ class Seq2AttnDecoder(nn.Module):
                  attn_vals=None,
                  full_attention_focus=False,
                  output_value='decoder_output',
-                 transcoder_hidden_activation=None):
+                 transcoder_hidden_activation=None,
+                 tha_initial_temperature=None):
         super(Seq2AttnDecoder, self).__init__()
 
         # Store values
@@ -110,7 +111,7 @@ class Seq2AttnDecoder(nn.Module):
                     sample_train=transcoder_hidden_activation,
                     sample_infer='argmax',
                     learn_temperature=learn_temperature,
-                    initial_temperature=initial_temperature)
+                    initial_temperature=tha_initial_temperature)
 
         # Get type of RNN cell
         rnn_cell = rnn_cell.lower()
