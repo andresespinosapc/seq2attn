@@ -238,15 +238,14 @@ class Seq2AttnDecoder(nn.Module):
 
         """
         if self.transcoder_hidden_activation is not None:
-            transcoder_hidden = self.inv_out(transcoder_hidden)
-        transcoder_output, transcoder_hidden = self.transcoder(embedded, transcoder_hidden)
-        if self.transcoder_hidden_activation is not None:
             transcoder_hidden = self.out(transcoder_hidden)
             if self.transcoder_hidden_activation != 'none':
                 mask = torch.zeros_like(transcoder_hidden, dtype=torch.bool)
                 transcoder_hidden = self.transcoder_hidden_activation(
                     transcoder_hidden, mask, None
                 )
+            transcoder_hidden = self.inv_out(transcoder_hidden)
+        transcoder_output, transcoder_hidden = self.transcoder(embedded, transcoder_hidden)
 
         context, attn = self.attention(queries=transcoder_output, keys=attn_keys, values=attn_vals,
                                        **kwargs)
