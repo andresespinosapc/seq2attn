@@ -89,7 +89,9 @@ class Seq2AttnDecoder(nn.Module):
                  full_attention_focus=False,
                  output_value='decoder_output',
                  transcoder_hidden_activation=None,
-                 tha_initial_temperature=None):
+                 tha_initial_temperature=None,
+                 decoder_hidden_activation=None,
+                 dha_initial_temperature=None):
         super(Seq2AttnDecoder, self).__init__()
 
         # Store values
@@ -105,13 +107,22 @@ class Seq2AttnDecoder(nn.Module):
         self.output_value = output_value
         self.transcoder_hidden_activation = transcoder_hidden_activation
         if transcoder_hidden_activation is not None:
-            self.inv_out = nn.Linear(vocab_size, hidden_size)
+            self.transcoder_inv_out = nn.Linear(vocab_size, hidden_size)
             if transcoder_hidden_activation != 'none':
                 self.transcoder_hidden_activation = AttentionActivation(
                     sample_train=transcoder_hidden_activation,
                     sample_infer='argmax',
                     learn_temperature=learn_temperature,
                     initial_temperature=tha_initial_temperature)
+        self.decoder_hidden_activation = decoder_hidden_activation
+        if decoder_hidden_activation is not None:
+            self.decoder_inv_out = nn.Linear(vocab_size, hidden_size)
+            if decoder_hidden_activation != 'none':
+                self.decoder_hidden_activation = AttentionActivation(
+                    sample_train=decoder_hidden_activation,
+                    sample_infer='argmax',
+                    learn_temperature=learn_temperature,
+                    initial_temperature=dha_initial_temperature)
 
         # Get type of RNN cell
         rnn_cell = rnn_cell.lower()
@@ -245,7 +256,7 @@ class Seq2AttnDecoder(nn.Module):
                 transcoder_hidden = self.transcoder_hidden_activation(
                     transcoder_hidden, mask, None
                 )
-            transcoder_hidden = self.inv_out(transcoder_hidden)
+            transcoder_hidden = self.transcoder_inv_out(transcoder_hidden)
         transcoder_output, transcoder_hidden = self.transcoder(embedded, transcoder_hidden)
 
         context, attn = self.attention(queries=transcoder_output, keys=attn_keys, values=attn_vals,
@@ -258,6 +269,14 @@ class Seq2AttnDecoder(nn.Module):
             elif self.rnn_type == 'lstm':
                 decoder_hidden = (decoder_hidden[0] * context.transpose(0, 1),
                                   decoder_hidden[1] * context.transpose(0, 1))
+        if self.decoder_hidden_activation is not None:
+            decoder_hidden = self.out(decoder_hidden)
+            if self.decoder_hidden_activation != 'none':
+                mask = torch.zeros_like(decoder_hidden, dtype=torch.bool)
+                decoder_hidden = self.decoder_hidden_activation(
+                    decoder_hidden, mask, None
+                )
+            decoder_hidden = self.decoder_inv_out(decoder_hidden)
         decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
 
         if self.output_value == 'decoder_output':
@@ -326,8 +345,6 @@ class Seq2AttnDecoder(nn.Module):
                                                              teacher_forcing_ratio)
 
         transcoder_hidden = self._init_state(encoder_hidden, 'encoder')
-        if self.transcoder_hidden_activation is not None:
-            transcoder_hidden = self.out(transcoder_hidden)
         decoder_hidden = self._init_state(encoder_hidden, 'new')
 
         use_teacher_forcing = True if random.random() < teacher_forcing_ratio else False

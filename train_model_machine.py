@@ -213,6 +213,8 @@ parser.add_argument('--full_attention_focus', type=bool, help='Indicate whether 
 parser.add_argument('--output_value', type=str, default=None, choices=['decoder_output', 'context'], help='Which is the output vector of the decoder')
 parser.add_argument('--transcoder_hidden_activation', type=str, default=None, choices=['none', 'gumbel_st'], help='Apply an activation to the transcoder hidden state in every step')
 parser.add_argument('--tha_initial_temperature', type=float, default=1., help='(Initial) temperature to use for Gumbel-Softmax or Softmax ST')
+parser.add_argument('--decoder_hidden_activation', type=str, default=None, choices=['none', 'gumbel_st'], help='Apply an activation to the decoder hidden state in every step')
+parser.add_argument('--dha_initial_temperature', type=float, default=1., help='(Initial) temperature to use for Gumbel-Softmax or Softmax ST')
 
 parser.add_argument('--exp_name', type=str, default=None, help='Experiment name for CometML logging')
 
@@ -372,7 +374,9 @@ else:
                             full_attention_focus=opt.full_attention_focus,
                             output_value=opt.output_value,
                             transcoder_hidden_activation=opt.transcoder_hidden_activation,
-                            tha_initial_temperature=opt.tha_initial_temperature)
+                            tha_initial_temperature=opt.tha_initial_temperature,
+                            decoder_hidden_activation=opt.decoder_hidden_activation,
+                            dha_initial_temperature=opt.dha_initial_temperature)
         seq2seq = Seq2seq(seq2attn_encoder, decoder)
     elif opt.model == 'transformer':
         seq2seq = Transformer(
