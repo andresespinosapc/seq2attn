@@ -91,7 +91,8 @@ class Seq2AttnDecoder(nn.Module):
                  transcoder_hidden_activation=None,
                  tha_initial_temperature=None,
                  decoder_hidden_activation=None,
-                 dha_initial_temperature=None):
+                 dha_initial_temperature=None,
+                 decoder_hidden_override=None):
         super(Seq2AttnDecoder, self).__init__()
 
         # Store values
@@ -123,6 +124,7 @@ class Seq2AttnDecoder(nn.Module):
                     sample_infer='argmax',
                     learn_temperature=learn_temperature,
                     initial_temperature=dha_initial_temperature)
+        self.decoder_hidden_override = decoder_hidden_override
 
         # Get type of RNN cell
         rnn_cell = rnn_cell.lower()
@@ -277,6 +279,15 @@ class Seq2AttnDecoder(nn.Module):
                     decoder_hidden, mask, None
                 )
             decoder_hidden = self.decoder_inv_out(decoder_hidden)
+        if self.decoder_hidden_override == 'zeros':
+            decoder_hidden = decoder_hidden * \
+                torch.zeros_like(decoder_hidden, device=device)
+        elif self.decoder_hidden_override == 'context':
+            if self.rnn_type == 'gru':
+                decoder_hidden = context.transpose(0, 1)
+            elif self.rnn_type == 'lstm':
+                decoder_hidden = (context.transpose(0, 1),
+                                  context.transpose(0, 1))
         decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
 
         if self.output_value == 'decoder_output':
