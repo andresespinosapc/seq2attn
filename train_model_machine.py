@@ -254,7 +254,7 @@ if not opt.attention and opt.attention_method:
 if opt.attention and not opt.attention_method:
     parser.error("Attention turned on, but no attention method provided")
 
-if opt.exp_name is None and not comet_args['disabled']:
+if opt.exp_name is None and not comet_args.get('disabled'):
     parser.error('Please provide exp_name if logging to CometML')
 experiment.set_name(opt.exp_name)
 
