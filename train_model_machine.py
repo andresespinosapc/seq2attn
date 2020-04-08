@@ -89,6 +89,9 @@ TASK_DEFAULT_PARAMS = {
         'dropout_p_decoder': 0.5,
     },
     'Hupkes_2019_lookup_seq2attn': {
+        'teacher_forcing_ratio': 0.5,
+        'initial_temperature': 5,
+        'learn_temperature': 'conditioned',
         'full_attention_focus': True,
         'sample_train': 'gumbel_st',
         'attn_vals': 'embeddings',
@@ -121,6 +124,9 @@ TASK_DEFAULT_PARAMS = {
         'dropout_p_decoder': 0.5,
     },
     'Hupkes_2019_SCAN_seq2attn': {
+        'teacher_forcing_ratio': 0.2,
+        'initial_temperature': 1,
+        'learn_temperature': 'no',
         'full_attention_focus': True,
         'sample_train': 'gumbel_st',
         'attn_vals': 'embeddings',
@@ -186,7 +192,7 @@ parser.add_argument('--src_vocab', type=int, help='source vocabulary size', defa
 parser.add_argument('--tgt_vocab', type=int, help='target vocabulary size', default=50000)
 parser.add_argument('--dropout_p_encoder', type=float, help='Dropout probability for the encoder')
 parser.add_argument('--dropout_p_decoder', type=float, help='Dropout probability for the decoder')
-parser.add_argument('--teacher_forcing_ratio', type=float, help='Teacher forcing ratio', default=0.2)
+parser.add_argument('--teacher_forcing_ratio', type=float, help='Teacher forcing ratio', default=None)
 parser.add_argument('--attention', choices=['pre-rnn'])
 parser.add_argument('--attention_method', choices=['dot', 'mlp', 'concat'], default=None)
 parser.add_argument('--metrics', nargs='+', default=['seq_acc'], choices=['word_acc', 'seq_acc', 'target_acc', 'sym_rwr_acc'], help='Metrics to use')
@@ -206,8 +212,8 @@ parser.add_argument('--cuda_device', default=0, type=int, help='set cuda device 
 # Arguments for the Seq2Attn model
 parser.add_argument('--sample_train', type=str, choices=['softmax', 'softmax_st', 'gumbel', 'gumbel_st', 'sparsemax'], help='During training, activate the attention vector using Softmax (ST), Gumbel-Softmax (ST) or Sparsemax')
 parser.add_argument('--sample_infer', type=str, default='argmax', choices=['softmax', 'softmax_st', 'gumbel', 'gumbel_st', 'sparsemax', 'argmax'], help='During testing, activate the attention vector using Softmax (ST), Gumbel-Softmax (ST), argmax or Sparsemax')
-parser.add_argument('--initial_temperature', type=float, default=1., help='(Initial) temperature to use for Gumbel-Softmax or Softmax ST')
-parser.add_argument('--learn_temperature', type=str, default='no', choices=['no', 'latent', 'conditioned'], help='Whether the temperature should be a learnable parameter. And whether it should be conditioned')
+parser.add_argument('--initial_temperature', type=float, default=None, help='(Initial) temperature to use for Gumbel-Softmax or Softmax ST')
+parser.add_argument('--learn_temperature', type=str, default=None, choices=['no', 'latent', 'conditioned'], help='Whether the temperature should be a learnable parameter. And whether it should be conditioned')
 parser.add_argument('--attn_vals', type=str, choices=['outputs', 'embeddings'], help="Attend to hidden states or embeddings.")
 parser.add_argument('--full_attention_focus', type=bool, help='Indicate whether to multiply the hidden state of the decoder with the context vector')
 parser.add_argument('--output_value', type=str, default=None, choices=['decoder_output', 'context'], help='Which is the output vector of the decoder')
