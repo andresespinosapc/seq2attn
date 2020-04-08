@@ -92,6 +92,7 @@ class Seq2AttnDecoder(nn.Module):
                  tha_initial_temperature=None,
                  decoder_hidden_activation=None,
                  dha_initial_temperature=None,
+                 dha_n_symbols=1,
                  decoder_hidden_override=None):
         super(Seq2AttnDecoder, self).__init__()
 
@@ -106,6 +107,7 @@ class Seq2AttnDecoder(nn.Module):
         self.sos_id = sos_id
         self.full_attention_focus = full_attention_focus
         self.output_value = output_value
+        self.vocab_size = vocab_size
         self.transcoder_hidden_activation = transcoder_hidden_activation
         if transcoder_hidden_activation is not None:
             self.transcoder_inv_out = nn.Linear(vocab_size, hidden_size)
@@ -117,7 +119,9 @@ class Seq2AttnDecoder(nn.Module):
                     initial_temperature=tha_initial_temperature)
         self.decoder_hidden_activation = decoder_hidden_activation
         if decoder_hidden_activation is not None:
-            self.decoder_inv_out = nn.Linear(vocab_size, hidden_size)
+            self.dha_n_symbols = dha_n_symbols
+            self.dec_hid_to_symbols = nn.Linear(hidden_size, vocab_size * dha_n_symbols)
+            self.dec_hid_from_symbols = nn.Linear(vocab_size * dha_n_symbols, hidden_size)
             if decoder_hidden_activation != 'none':
                 self.decoder_hidden_activation = AttentionActivation(
                     sample_train=decoder_hidden_activation,
@@ -272,13 +276,23 @@ class Seq2AttnDecoder(nn.Module):
                 decoder_hidden = (decoder_hidden[0] * context.transpose(0, 1),
                                   decoder_hidden[1] * context.transpose(0, 1))
         if self.decoder_hidden_activation is not None:
-            decoder_hidden = self.out(decoder_hidden)
+            batch_size, output_size, hidden_size = decoder_hidden.shape
+            hidden_symbols_flatten = self.dec_hid_to_symbols(decoder_hidden)
+            hidden_symbols = hidden_symbols_flatten.view(
+                batch_size,
+                output_size * self.dha_n_symbols,
+                self.vocab_size)
             if self.decoder_hidden_activation != 'none':
-                mask = torch.zeros_like(decoder_hidden, dtype=torch.bool)
-                decoder_hidden = self.decoder_hidden_activation(
-                    decoder_hidden, mask, None
+                mask = torch.zeros_like(hidden_symbols, dtype=torch.bool)
+                hidden_symbols = self.decoder_hidden_activation(
+                    hidden_symbols, mask, None
                 )
-            decoder_hidden = self.decoder_inv_out(decoder_hidden)
+            hidden_symbols_flatten = hidden_symbols.view(
+                batch_size,
+                output_size,
+                self.dha_n_symbols * self.vocab_size,
+            )
+            decoder_hidden = self.dec_hid_from_symbols(hidden_symbols_flatten)
         if self.decoder_hidden_override == 'zeros':
             decoder_hidden = decoder_hidden * \
                 torch.zeros_like(decoder_hidden, device=device)
