@@ -200,7 +200,10 @@ class Seq2AttnDecoder(nn.Module):
             n_layers,
             batch_first=True,
             dropout=dropout_p)
-        self.out = nn.Linear(self.hidden_size, vocab_size)
+        if self.output_value == 'decoder_output':
+            self.out = nn.Linear(self.hidden_size, vocab_size)
+        elif self.output_value == 'context':
+            self.out = nn.Linear(embedding_dim, vocab_size)
 
     def get_valid_action_mask(self, state, input_lengths):
         """Get valid action mask.
