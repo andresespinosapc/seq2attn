@@ -273,6 +273,7 @@ class Seq2AttnDecoder(nn.Module):
         h = transcoder_hidden
         if isinstance(transcoder_hidden, tuple):
             h, c = transcoder_hidden
+        transcoder_input = embedded
         if self.use_attention == 'pre-transcoder':
             context, attn = self.attention(queries=h[-1:].transpose(0, 1), keys=attn_keys, values=attn_vals,
                                         **kwargs)
@@ -280,8 +281,6 @@ class Seq2AttnDecoder(nn.Module):
                 russin_ctx, _ = self.attention(queries=h[-1:].transpose(0, 1), keys=attn_keys, values=attn_keys,
                                             **kwargs)
                 transcoder_input = torch.cat((embedded, russin_ctx), dim=2)
-            elif self.transcoder_input == 'emb':
-                transcoder_input = embedded
         transcoder_output, transcoder_hidden = self.transcoder(transcoder_input, transcoder_hidden)
         if self.use_attention == 'post-transcoder':
             context, attn = self.attention(queries=transcoder_output, keys=attn_keys, values=attn_vals,
