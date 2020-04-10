@@ -88,6 +88,7 @@ class Seq2AttnDecoder(nn.Module):
                  attn_vals=None,
                  full_attention_focus=False,
                  output_value='decoder_output',
+                 transcoder_input='emb',
                  transcoder_hidden_activation=None,
                  tha_initial_temperature=None,
                  decoder_hidden_activation=None,
@@ -108,6 +109,7 @@ class Seq2AttnDecoder(nn.Module):
         self.full_attention_focus = full_attention_focus
         self.output_value = output_value
         self.vocab_size = vocab_size
+        self.transcoder_input = transcoder_input
         self.transcoder_hidden_activation = transcoder_hidden_activation
         if transcoder_hidden_activation is not None:
             self.transcoder_inv_out = nn.Linear(vocab_size, hidden_size)
@@ -177,6 +179,8 @@ class Seq2AttnDecoder(nn.Module):
             hidden_size)
         self.input_dropout = nn.Dropout(
             p=input_dropout_p)
+        if self.transcoder_input == 'emb_and_russinctx':
+            transcoder_input_size *= 2
         self.transcoder = rnn_cell(
             transcoder_input_size,
             hidden_size,
@@ -272,7 +276,13 @@ class Seq2AttnDecoder(nn.Module):
         if self.use_attention == 'pre-transcoder':
             context, attn = self.attention(queries=h[-1:].transpose(0, 1), keys=attn_keys, values=attn_vals,
                                         **kwargs)
-        transcoder_output, transcoder_hidden = self.transcoder(embedded, transcoder_hidden)
+            if self.transcoder_input == 'emb_and_russinctx':
+                russin_ctx, _ = self.attention(queries=h[-1:].transpose(0, 1), keys=attn_keys, values=attn_keys,
+                                            **kwargs)
+                transcoder_input = torch.cat((embedded, russin_ctx), dim=2)
+            elif self.transcoder_input == 'emb':
+                transcoder_input = embedded
+        transcoder_output, transcoder_hidden = self.transcoder(transcoder_input, transcoder_hidden)
         if self.use_attention == 'post-transcoder':
             context, attn = self.attention(queries=transcoder_output, keys=attn_keys, values=attn_vals,
                                         **kwargs)

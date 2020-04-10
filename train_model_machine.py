@@ -130,6 +130,7 @@ TASK_DEFAULT_PARAMS = {
         'sample_train': 'softmax',
         'attn_vals': 'embeddings',
         'output_value': 'context',
+        'transcoder_input': 'emb_and_russinctx',
         'batch_size': 1,
         'embedding_size': 200,
         'hidden_size': 200,
@@ -235,6 +236,7 @@ parser.add_argument('--learn_temperature', type=str, default=None, choices=['no'
 parser.add_argument('--attn_vals', type=str, choices=['outputs', 'embeddings'], help="Attend to hidden states or embeddings.")
 parser.add_argument('--full_attention_focus', type=bool, help='Indicate whether to multiply the hidden state of the decoder with the context vector')
 parser.add_argument('--output_value', type=str, default=None, choices=['decoder_output', 'context'], help='Which is the output vector of the decoder')
+parser.add_argument('--transcoder_input', type=str, default=None, choices=['emb', 'emb_and_russin_ctx'], help='What to use as input for the transcoder')
 parser.add_argument('--transcoder_hidden_activation', type=str, default=None, choices=['none', 'gumbel_st'], help='Apply an activation to the transcoder hidden state in every step')
 parser.add_argument('--tha_initial_temperature', type=float, default=1., help='(Initial) temperature to use for Gumbel-Softmax or Softmax ST')
 parser.add_argument('--decoder_hidden_activation', type=str, default=None, choices=['none', 'gumbel_st'], help='Apply an activation to the decoder hidden state in every step')
@@ -399,6 +401,7 @@ else:
                             attn_vals=opt.attn_vals,
                             full_attention_focus=opt.full_attention_focus,
                             output_value=opt.output_value,
+                            transcoder_input=opt.transcoder_input,
                             transcoder_hidden_activation=opt.transcoder_hidden_activation,
                             tha_initial_temperature=opt.tha_initial_temperature,
                             decoder_hidden_activation=opt.decoder_hidden_activation,
