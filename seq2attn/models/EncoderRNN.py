@@ -37,13 +37,18 @@ class EncoderRNN(BaseRNN):
 
     def __init__(self, vocab_size, max_len, hidden_size, embedding_size,
             input_dropout_p=0, dropout_p=0,
-            n_layers=1, bidirectional=False, rnn_cell='gru', variable_lengths=False):
+            n_layers=1, bidirectional=False, rnn_cell='gru', variable_lengths=False,
+            separate_semantics=False):
         super(EncoderRNN, self).__init__(vocab_size, max_len, hidden_size,
                 input_dropout_p, dropout_p, n_layers, rnn_cell)
 
         self.embedding_size = embedding_size
         self.variable_lengths = variable_lengths
         self.embedding = nn.Embedding(vocab_size, embedding_size)
+        if separate_semantics:
+            self.semantic_embedding = nn.Embedding(vocab_size, embedding_size)
+        else:
+            self.semantic_embedding = self.embedding
         self.rnn = self.rnn_cell(embedding_size, hidden_size, n_layers,
                                  batch_first=True, bidirectional=bidirectional, dropout=dropout_p)
 
@@ -70,4 +75,7 @@ class EncoderRNN(BaseRNN):
         if self.variable_lengths:
             output, _ = nn.utils.rnn.pad_packed_sequence(output, batch_first=True)
 
-        return embeddings, output, hidden
+        semantic_embeddings = self.semantic_embedding(input_var)
+        semantic_embeddings = self.input_dropout(semantic_embeddings)
+
+        return semantic_embeddings, output, hidden

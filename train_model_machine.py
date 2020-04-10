@@ -130,6 +130,7 @@ TASK_DEFAULT_PARAMS = {
         'sample_train': 'softmax',
         'attn_vals': 'embeddings',
         'output_value': 'context',
+        'separate_encoder_semantics': True,
         'transcoder_input': 'emb_and_russinctx',
         'batch_size': 1,
         'embedding_size': 200,
@@ -236,6 +237,7 @@ parser.add_argument('--learn_temperature', type=str, default=None, choices=['no'
 parser.add_argument('--attn_vals', type=str, choices=['outputs', 'embeddings'], help="Attend to hidden states or embeddings.")
 parser.add_argument('--full_attention_focus', type=bool, help='Indicate whether to multiply the hidden state of the decoder with the context vector')
 parser.add_argument('--output_value', type=str, default=None, choices=['decoder_output', 'context'], help='Which is the output vector of the decoder')
+parser.add_argument('--separate_encoder_semantics', type=bool, default=None, help='Use different weights for encoder semantics and syntactic')
 parser.add_argument('--transcoder_input', type=str, default=None, choices=['emb', 'emb_and_russin_ctx'], help='What to use as input for the transcoder')
 parser.add_argument('--transcoder_hidden_activation', type=str, default=None, choices=['none', 'gumbel_st'], help='Apply an activation to the transcoder hidden state in every step')
 parser.add_argument('--tha_initial_temperature', type=float, default=1., help='(Initial) temperature to use for Gumbel-Softmax or Softmax ST')
@@ -382,7 +384,8 @@ else:
                                     n_layers=opt.n_layers,
                                     bidirectional=opt.bidirectional,
                                     rnn_cell=opt.rnn_cell,
-                                    variable_lengths=True)
+                                    variable_lengths=True,
+                                    separate_semantics=opt.separate_encoder_semantics)
         decoder = Seq2AttnDecoder(
                             len(tgt.vocab), max_len, decoder_hidden_size,
                             dropout_p=opt.dropout_p_decoder,
