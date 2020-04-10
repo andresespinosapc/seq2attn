@@ -147,8 +147,8 @@ class Seq2AttnDecoder(nn.Module):
 
         # Store attention method
         self.use_attention = use_attention
-        if self.use_attention != 'pre-rnn':
-            raise Exception("Must use pre-rnn in combination with seq2attn")
+        # if self.use_attention != 'pre-rnn':
+        #     raise Exception("Must use pre-rnn in combination with seq2attn")
 
         # Create learnable parameter for initializing the decoder
         if self.rnn_type == 'lstm':
@@ -266,10 +266,17 @@ class Seq2AttnDecoder(nn.Module):
                     transcoder_hidden, mask, None
                 )
             transcoder_hidden = self.transcoder_inv_out(transcoder_hidden)
+        h = transcoder_hidden
+        if isinstance(transcoder_hidden, tuple):
+            h, c = transcoder_hidden
+        if self.use_attention == 'pre-transcoder':
+            context, attn = self.attention(queries=h[-1:].transpose(0, 1), keys=attn_keys, values=attn_vals,
+                                        **kwargs)
         transcoder_output, transcoder_hidden = self.transcoder(embedded, transcoder_hidden)
+        if self.use_attention == 'post-transcoder':
+            context, attn = self.attention(queries=transcoder_output, keys=attn_keys, values=attn_vals,
+                                        **kwargs)
 
-        context, attn = self.attention(queries=transcoder_output, keys=attn_keys, values=attn_vals,
-                                       **kwargs)
         decoder_input = torch.cat((context, embedded), dim=2)
 
         if self.full_attention_focus:
@@ -401,7 +408,7 @@ class Seq2AttnDecoder(nn.Module):
         # We also need to unroll when we don't use teacher forcing. We need perform the
         # decoder steps one-by-one since the output needs to be copied to the input of
         # the next step.
-        if self.use_attention == 'pre-rnn' or not use_teacher_forcing:
+        if self.use_attention in ['pre-transcoder', 'post-transcoder'] or not use_teacher_forcing:
             unrolling = True
         else:
             unrolling = False

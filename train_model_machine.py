@@ -82,7 +82,7 @@ TASK_DEFAULT_PARAMS = {
         'hidden_size': 512,
         'n_layers': 1,
         'rnn_cell': 'gru',
-        'attention': 'pre-rnn',
+        'attention': 'pre-transcoder',
         'attention_method': 'mlp',
         'max_len': 50,
         'dropout_p_encoder': 0.5,
@@ -101,7 +101,7 @@ TASK_DEFAULT_PARAMS = {
         'hidden_size': 256,
         'n_layers': 1,
         'rnn_cell': 'gru',
-        'attention': 'pre-rnn',
+        'attention': 'post-transcoder',
         'attention_method': 'mlp',
         'max_len': 50,
         'dropout_p_encoder': 0.5,
@@ -118,7 +118,7 @@ TASK_DEFAULT_PARAMS = {
         'hidden_size': 200,
         'n_layers': 2,
         'rnn_cell': 'lstm',
-        'attention': 'pre-rnn',
+        'attention': 'pre-transcoder',
         'attention_method': 'mlp',
         'max_len': 50,
         'dropout_p_encoder': 0.5,
@@ -135,7 +135,7 @@ TASK_DEFAULT_PARAMS = {
         'hidden_size': 200,
         'n_layers': 2,
         'rnn_cell': 'lstm',
-        'attention': 'pre-rnn',
+        'attention': 'pre-transcoder',
         'attention_method': 'dot',
         'max_len': 50,
         'dropout_p_encoder': 0.5,
@@ -154,7 +154,7 @@ TASK_DEFAULT_PARAMS = {
         'hidden_size': 512,
         'n_layers': 1,
         'rnn_cell': 'gru',
-        'attention': 'pre-rnn',
+        'attention': 'post-transcoder',
         'attention_method': 'mlp',
         'max_len': 50,
         'dropout_p_encoder': 0.5,
@@ -211,7 +211,7 @@ parser.add_argument('--tgt_vocab', type=int, help='target vocabulary size', defa
 parser.add_argument('--dropout_p_encoder', type=float, help='Dropout probability for the encoder')
 parser.add_argument('--dropout_p_decoder', type=float, help='Dropout probability for the decoder')
 parser.add_argument('--teacher_forcing_ratio', type=float, help='Teacher forcing ratio', default=None)
-parser.add_argument('--attention', choices=['pre-rnn'])
+parser.add_argument('--attention', choices=['pre-transcoder', 'post-transcoder'])
 parser.add_argument('--attention_method', choices=['dot', 'mlp', 'concat'], default=None)
 parser.add_argument('--metrics', nargs='+', default=['seq_acc'], choices=['word_acc', 'seq_acc', 'target_acc', 'sym_rwr_acc'], help='Metrics to use')
 parser.add_argument('--batch_size', type=int, help='Batch size')
