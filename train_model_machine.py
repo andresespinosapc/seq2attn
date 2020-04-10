@@ -73,6 +73,7 @@ TASK_DEFAULT_PARAMS = {
         'dropout_p_decoder': 0.5,
     },
     'Hupkes_2019_lookup_baseline': {
+        'bidirectional': True,
         'full_attention_focus': False,
         'sample_train': 'softmax',
         'attn_vals': 'outputs',
@@ -108,6 +109,7 @@ TASK_DEFAULT_PARAMS = {
         'dropout_p_decoder': 0.5,
     },
     'Hupkes_2019_SCAN_baseline': {
+        'bidirectional': True,
         'teacher_forcing_ratio': 1.0,
         'full_attention_focus': False,
         'sample_train': 'softmax',
@@ -125,6 +127,7 @@ TASK_DEFAULT_PARAMS = {
         'dropout_p_decoder': 0.5,
     },
     'Russin_2019_SCAN': {
+        'bidirectional': True,
         'teacher_forcing_ratio': 1.0,
         'full_attention_focus': False,
         'sample_train': 'softmax',
@@ -144,7 +147,7 @@ TASK_DEFAULT_PARAMS = {
         'dropout_p_decoder': 0.5,
     },
     'Hupkes_2019_SCAN_seq2attn': {
-        'teacher_forcing_ratio': 0.2,
+        'teacher_forcing_ratio': 0.5,
         'initial_temperature': 1,
         'learn_temperature': 'no',
         'full_attention_focus': True,
@@ -204,7 +207,7 @@ parser.add_argument('--optim', type=str, default='adam', help='Choose optimizer'
 parser.add_argument('--max_len', type=int, help='Maximum sequence length')
 parser.add_argument('--lower', action='store_true', help='Whether to lowercase the text in this field')
 parser.add_argument('--rnn_cell', type=str, help="Chose type of rnn cell")
-parser.add_argument('--bidirectional', action='store_true', help="Flag for bidirectional encoder")
+parser.add_argument('--bidirectional', type=bool, default=None, help="Bidirectional encoder")
 parser.add_argument('--embedding_size', type=int, help='Embedding size')
 parser.add_argument('--hidden_size', type=int, help='Hidden layer size')
 parser.add_argument('--n_layers', type=int, help='Number of RNN layers in both encoder and decoder')
