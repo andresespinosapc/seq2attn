@@ -112,7 +112,8 @@ class Seq2AttnDecoder(nn.Module):
         self.transcoder_input = transcoder_input
         self.transcoder_hidden_activation = transcoder_hidden_activation
         if transcoder_hidden_activation is not None:
-            self.transcoder_inv_out = nn.Linear(vocab_size, hidden_size)
+            self.transc_hid_to_symbols = nn.Linear(hidden_size, vocab_size)
+            self.transc_hid_from_symbols = nn.Linear(vocab_size, hidden_size)
             if transcoder_hidden_activation != 'none':
                 self.transcoder_hidden_activation = AttentionActivation(
                     sample_train=transcoder_hidden_activation,
@@ -263,13 +264,13 @@ class Seq2AttnDecoder(nn.Module):
 
         """
         if self.transcoder_hidden_activation is not None:
-            transcoder_hidden = self.out(transcoder_hidden)
+            transcoder_hidden = self.transc_hid_to_symbols(transcoder_hidden)
             if self.transcoder_hidden_activation != 'none':
                 mask = torch.zeros_like(transcoder_hidden, dtype=torch.bool)
                 transcoder_hidden = self.transcoder_hidden_activation(
                     transcoder_hidden, mask, None
                 )
-            transcoder_hidden = self.transcoder_inv_out(transcoder_hidden)
+            transcoder_hidden = self.transc_hid_from_symbols(transcoder_hidden)
         h = transcoder_hidden
         if isinstance(transcoder_hidden, tuple):
             h, c = transcoder_hidden
