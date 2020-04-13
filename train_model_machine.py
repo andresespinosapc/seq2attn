@@ -241,6 +241,7 @@ parser.add_argument('--attn_vals', type=str, choices=['outputs', 'embeddings'], 
 parser.add_argument('--full_attention_focus', type=bool, help='Indicate whether to multiply the hidden state of the decoder with the context vector')
 parser.add_argument('--output_value', type=str, default=None, choices=['decoder_output', 'context'], help='Which is the output vector of the decoder')
 parser.add_argument('--separate_encoder_semantics', type=bool, default=None, help='Use different weights for encoder semantics and syntactic')
+parser.add_argument('--encoder_output_concat', type=str, default=None, choices=['default', 'russin'], help='How to concatenate bidirectional encoder hidden states')
 parser.add_argument('--transcoder_input', type=str, default=None, choices=['emb', 'emb_and_russin_ctx'], help='What to use as input for the transcoder')
 parser.add_argument('--transcoder_hidden_activation', type=str, default=None, choices=['none', 'gumbel_st'], help='Apply an activation to the transcoder hidden state in every step')
 parser.add_argument('--tha_initial_temperature', type=float, default=1., help='(Initial) temperature to use for Gumbel-Softmax or Softmax ST')
@@ -388,7 +389,8 @@ else:
                                     bidirectional=opt.bidirectional,
                                     rnn_cell=opt.rnn_cell,
                                     variable_lengths=True,
-                                    separate_semantics=opt.separate_encoder_semantics)
+                                    separate_semantics=opt.separate_encoder_semantics,
+                                    output_concat=opt.encoder_output_concat)
         decoder = Seq2AttnDecoder(
                             len(tgt.vocab), max_len, decoder_hidden_size,
                             dropout_p=opt.dropout_p_decoder,

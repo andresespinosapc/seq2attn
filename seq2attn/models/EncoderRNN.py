@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 
 from machine.models.baseRNN import BaseRNN
@@ -38,10 +39,13 @@ class EncoderRNN(BaseRNN):
     def __init__(self, vocab_size, max_len, hidden_size, embedding_size,
             input_dropout_p=0, dropout_p=0,
             n_layers=1, bidirectional=False, rnn_cell='gru', variable_lengths=False,
-            separate_semantics=False):
+            separate_semantics=False, output_concat='default'):
         super(EncoderRNN, self).__init__(vocab_size, max_len, hidden_size,
                 input_dropout_p, dropout_p, n_layers, rnn_cell)
 
+        self.num_directions = 2 if bidirectional else 1
+        self.hidden_size = hidden_size
+        self.output_concat = output_concat
         self.embedding_size = embedding_size
         self.variable_lengths = variable_lengths
         self.embedding = nn.Embedding(vocab_size, embedding_size)
@@ -51,6 +55,10 @@ class EncoderRNN(BaseRNN):
             self.semantic_embedding = self.embedding
         self.rnn = self.rnn_cell(embedding_size, hidden_size, n_layers,
                                  batch_first=True, bidirectional=bidirectional, dropout=dropout_p)
+
+    @property
+    def device(self):
+        return next(self.parameters()).device
 
     def forward(self, input_var, input_lengths=None):
         """
@@ -74,6 +82,16 @@ class EncoderRNN(BaseRNN):
         output, hidden = self.rnn(embedded)
         if self.variable_lengths:
             output, _ = nn.utils.rnn.pad_packed_sequence(output, batch_first=True)
+        if self.output_concat == 'russin':
+            seq_len, batch_size = output.shape[:2]
+            split_dirs_output = output.view(
+                seq_len, batch_size,
+                self.num_directions, self.hidden_size)
+            forward_dir = split_dirs_output[:, :, 0, :]
+            backward_dir = split_dirs_output[:, :, 1, :]
+            forward_to_concat = torch.cat([forward_dir[-1:], forward_dir[:-1]], dim=0).unsqueeze(2)
+            backward_to_concat = torch.cat([backward_dir[1:], backward_dir[:1]], dim=0).unsqueeze(2)
+            output = torch.cat([forward_to_concat, backward_to_concat], dim=2).view(output.shape)
 
         semantic_embeddings = self.semantic_embedding(input_var)
         semantic_embeddings = self.input_dropout(semantic_embeddings)
