@@ -91,6 +91,7 @@ class Seq2AttnDecoder(nn.Module):
                  transcoder_input='emb',
                  transcoder_hidden_activation=None,
                  tha_initial_temperature=None,
+                 tha_n_symbols=1,
                  decoder_hidden_activation=None,
                  dha_initial_temperature=None,
                  dha_n_symbols=1,
@@ -112,6 +113,7 @@ class Seq2AttnDecoder(nn.Module):
         self.transcoder_input = transcoder_input
         self.transcoder_hidden_activation = transcoder_hidden_activation
         if transcoder_hidden_activation is not None:
+            self.tha_n_symbols = tha_n_symbols
             self.transc_hid_to_symbols = nn.Linear(hidden_size, vocab_size)
             self.transc_hid_from_symbols = nn.Linear(vocab_size, hidden_size)
             if transcoder_hidden_activation != 'none':
@@ -246,6 +248,49 @@ class Seq2AttnDecoder(nn.Module):
 
         return valid_action_mask
 
+    def symbol_bottleneck(self, module, hidden):
+        if module == 'transcoder':
+            n_symbols = self.tha_n_symbols
+            hid_to_symbols = self.transc_hid_to_symbols
+            hid_from_symbols = self.transc_hid_from_symbols
+            hidden_activation = self.transcoder_hidden_activation
+        elif module == 'decoder':
+            n_symbols = self.dha_n_symbols
+            hid_to_symbols = self.dec_hid_to_symbols
+            hid_from_symbols = self.dec_hid_from_symbols
+            hidden_activation = self.decoder_hidden_activation
+
+        batch_size, output_size, hidden_size = hidden.shape
+        hidden_symbols_flatten = hid_to_symbols(hidden)
+        hidden_symbols = hidden_symbols_flatten.view(
+            batch_size,
+            output_size * n_symbols,
+            -1,
+        )
+        if hidden_activation != 'none':
+            mask = torch.zeros_like(hidden_symbols, dtype=torch.bool)
+            hidden_symbols = hidden_activation(
+                hidden_symbols, mask, None
+            )
+        hidden_symbols_flatten = hidden_symbols.view(
+            batch_size,
+            output_size,
+            -1,
+        )
+        hidden = hid_from_symbols(hidden_symbols_flatten)
+
+        return hidden
+
+    def hidden_bottleneck(self, module, hidden):
+        if isinstance(hidden, tuple):
+            h, c = hidden
+            return (
+                self.symbol_bottleneck(module, h),
+                self.symbol_bottleneck(module, c),
+            )
+        else:
+            return self.symbol_bottleneck(module, hidden)
+
     def forward_decoder(self, embedded, transcoder_hidden, decoder_hidden, attn_keys, attn_vals,
                         **kwargs):
         """Forward decoder.
@@ -263,17 +308,11 @@ class Seq2AttnDecoder(nn.Module):
             list(torch.tensor): List of length max_output_length containing the selected actions
 
         """
-        if self.transcoder_hidden_activation is not None:
-            transcoder_hidden = self.transc_hid_to_symbols(transcoder_hidden)
-            if self.transcoder_hidden_activation != 'none':
-                mask = torch.zeros_like(transcoder_hidden, dtype=torch.bool)
-                transcoder_hidden = self.transcoder_hidden_activation(
-                    transcoder_hidden, mask, None
-                )
-            transcoder_hidden = self.transc_hid_from_symbols(transcoder_hidden)
         h = transcoder_hidden
         if isinstance(transcoder_hidden, tuple):
             h, c = transcoder_hidden
+        if self.transcoder_hidden_activation is not None:
+            transcoder_hidden = self.hidden_bottleneck('transcoder', transcoder_hidden)
         transcoder_input = embedded
         if self.use_attention == 'pre-transcoder':
             context, attn = self.attention(queries=h[-1:].transpose(0, 1), keys=attn_keys, values=attn_vals,
@@ -296,23 +335,7 @@ class Seq2AttnDecoder(nn.Module):
                 decoder_hidden = (decoder_hidden[0] * context.transpose(0, 1),
                                   decoder_hidden[1] * context.transpose(0, 1))
         if self.decoder_hidden_activation is not None:
-            batch_size, output_size, hidden_size = decoder_hidden.shape
-            hidden_symbols_flatten = self.dec_hid_to_symbols(decoder_hidden)
-            hidden_symbols = hidden_symbols_flatten.view(
-                batch_size,
-                output_size * self.dha_n_symbols,
-                self.vocab_size)
-            if self.decoder_hidden_activation != 'none':
-                mask = torch.zeros_like(hidden_symbols, dtype=torch.bool)
-                hidden_symbols = self.decoder_hidden_activation(
-                    hidden_symbols, mask, None
-                )
-            hidden_symbols_flatten = hidden_symbols.view(
-                batch_size,
-                output_size,
-                self.dha_n_symbols * self.vocab_size,
-            )
-            decoder_hidden = self.dec_hid_from_symbols(hidden_symbols_flatten)
+            decoder_hidden = self.hidden_bottleneck('decoder', decoder_hidden)
         if self.decoder_hidden_override == 'zeros':
             decoder_hidden = decoder_hidden * \
                 torch.zeros_like(decoder_hidden, device=device)

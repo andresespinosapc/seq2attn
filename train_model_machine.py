@@ -73,7 +73,7 @@ TASK_DEFAULT_PARAMS = {
         'dropout_p_decoder': 0.5,
     },
     'Hupkes_2019_lookup_baseline': {
-        'bidirectional': True,
+        'bidirectional': False,
         'full_attention_focus': False,
         'sample_train': 'softmax',
         'attn_vals': 'outputs',
@@ -90,6 +90,7 @@ TASK_DEFAULT_PARAMS = {
         'dropout_p_decoder': 0.5,
     },
     'Hupkes_2019_lookup_seq2attn': {
+        'bidirectional': False,
         'teacher_forcing_ratio': 0.5,
         'initial_temperature': 5,
         'learn_temperature': 'conditioned',
