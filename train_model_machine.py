@@ -246,8 +246,10 @@ parser.add_argument('--encoder_output_concat', type=str, default=None, choices=[
 parser.add_argument('--transcoder_input', type=str, default=None, choices=['emb', 'emb_and_russin_ctx'], help='What to use as input for the transcoder')
 parser.add_argument('--transcoder_hidden_activation', type=str, default=None, choices=['none', 'gumbel_st'], help='Apply an activation to the transcoder hidden state in every step')
 parser.add_argument('--tha_initial_temperature', type=float, default=1., help='(Initial) temperature to use for Gumbel-Softmax or Softmax ST')
+parser.add_argument('--tha_learn_temperature', type=str, default=None, choices=['no', 'latent', 'conditioned'], help='Whether the temperature should be a learnable parameter. And whether it should be conditioned')
 parser.add_argument('--decoder_hidden_activation', type=str, default=None, choices=['none', 'gumbel_st'], help='Apply an activation to the decoder hidden state in every step')
 parser.add_argument('--dha_initial_temperature', type=float, default=1., help='(Initial) temperature to use for Gumbel-Softmax or Softmax ST')
+parser.add_argument('--dha_learn_temperature', type=str, default=None, choices=['no', 'latent', 'conditioned'], help='Whether the temperature should be a learnable parameter. And whether it should be conditioned')
 parser.add_argument('--dha_n_symbols', type=int, default=1, help='Number of symbols in which the decoder hidden state is transformed')
 parser.add_argument('--decoder_hidden_override', type=str, default=None, choices=['zeros', 'context'], help='Override decoder hidden state with another vector')
 
@@ -413,8 +415,10 @@ else:
                             transcoder_input=opt.transcoder_input,
                             transcoder_hidden_activation=opt.transcoder_hidden_activation,
                             tha_initial_temperature=opt.tha_initial_temperature,
+                            tha_learn_temperature=opt.tha_learn_temperature,
                             decoder_hidden_activation=opt.decoder_hidden_activation,
                             dha_initial_temperature=opt.dha_initial_temperature,
+                            dha_learn_temperature=opt.dha_learn_temperature,
                             dha_n_symbols=opt.dha_n_symbols,
                             decoder_hidden_override=opt.decoder_hidden_override)
         seq2seq = Seq2seq(seq2attn_encoder, decoder)

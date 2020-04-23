@@ -91,9 +91,11 @@ class Seq2AttnDecoder(nn.Module):
                  transcoder_input='emb',
                  transcoder_hidden_activation=None,
                  tha_initial_temperature=None,
+                 tha_learn_temperature=None,
                  tha_n_symbols=1,
                  decoder_hidden_activation=None,
                  dha_initial_temperature=None,
+                 dha_learn_temperature=None,
                  dha_n_symbols=1,
                  decoder_hidden_override=None):
         super(Seq2AttnDecoder, self).__init__()
@@ -120,7 +122,7 @@ class Seq2AttnDecoder(nn.Module):
                 self.transcoder_hidden_activation = AttentionActivation(
                     sample_train=transcoder_hidden_activation,
                     sample_infer='argmax',
-                    learn_temperature=learn_temperature,
+                    learn_temperature=tha_learn_temperature,
                     initial_temperature=tha_initial_temperature)
         self.decoder_hidden_activation = decoder_hidden_activation
         if decoder_hidden_activation is not None:
@@ -131,7 +133,7 @@ class Seq2AttnDecoder(nn.Module):
                 self.decoder_hidden_activation = AttentionActivation(
                     sample_train=decoder_hidden_activation,
                     sample_infer='argmax',
-                    learn_temperature=learn_temperature,
+                    learn_temperature=dha_learn_temperature,
                     initial_temperature=dha_initial_temperature)
         self.decoder_hidden_override = decoder_hidden_override
 
