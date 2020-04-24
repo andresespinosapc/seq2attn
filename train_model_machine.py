@@ -253,6 +253,8 @@ parser.add_argument('--dha_learn_temperature', type=str, default=None, choices=[
 parser.add_argument('--dha_n_symbols', type=int, default=1, help='Number of symbols in which the decoder hidden state is transformed')
 parser.add_argument('--decoder_hidden_override', type=str, default=None, choices=['zeros', 'context'], help='Override decoder hidden state with another vector')
 
+parser.add_argument('--encoder_use_pos_enc', type=str, default=None, choices=['replace', 'apply'], help='Use positional encoding on encoder')
+
 parser.add_argument('--exp_name', type=str, default=None, help='Experiment name for CometML logging')
 
 opt = parser.parse_args()
@@ -393,7 +395,8 @@ else:
                                     rnn_cell=opt.rnn_cell,
                                     variable_lengths=True,
                                     separate_semantics=opt.separate_encoder_semantics,
-                                    output_concat=opt.encoder_output_concat)
+                                    output_concat=opt.encoder_output_concat,
+                                    use_positional_encoding=opt.encoder_use_pos_enc)
         decoder = Seq2AttnDecoder(
                             len(tgt.vocab), max_len, decoder_hidden_size,
                             dropout_p=opt.dropout_p_decoder,

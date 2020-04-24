@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 
 from machine.models.baseRNN import BaseRNN
+from ..util.positional_encoding import PositionalEncoding
 
 
 class EncoderRNN(BaseRNN):
@@ -39,7 +40,8 @@ class EncoderRNN(BaseRNN):
     def __init__(self, vocab_size, max_len, hidden_size, embedding_size,
             input_dropout_p=0, dropout_p=0,
             n_layers=1, bidirectional=False, rnn_cell='gru', variable_lengths=False,
-            separate_semantics=False, output_concat='default'):
+            separate_semantics=False, output_concat='default',
+            use_positional_encoding=None):
         super(EncoderRNN, self).__init__(vocab_size, max_len, hidden_size,
                 input_dropout_p, dropout_p, n_layers, rnn_cell)
 
@@ -55,6 +57,9 @@ class EncoderRNN(BaseRNN):
             self.semantic_embedding = self.embedding
         self.rnn = self.rnn_cell(embedding_size, hidden_size, n_layers,
                                  batch_first=True, bidirectional=bidirectional, dropout=dropout_p)
+        self.use_positional_encoding = use_positional_encoding
+        if self.use_positional_encoding is not None:
+            self.positional_encoding = PositionalEncoding(hidden_size, max_len=max_len)
 
     @property
     def device(self):
@@ -92,6 +97,12 @@ class EncoderRNN(BaseRNN):
             forward_to_concat = torch.cat([forward_dir[-1:], forward_dir[:-1]], dim=0).unsqueeze(2)
             backward_to_concat = torch.cat([backward_dir[1:], backward_dir[:1]], dim=0).unsqueeze(2)
             output = torch.cat([forward_to_concat, backward_to_concat], dim=2).view(output.shape)
+
+        if self.use_positional_encoding == 'replace':
+            output = self.positional_encoding.pe[:output.shape[1]].transpose(0, 1).expand(output.shape)
+        elif self.use_positional_encoding == 'apply':
+            output = self.positional_encoding(output.transpose(0, 1)).transpose(0, 1)
+            hidden = output[:, -1].unsqueeze(0)
 
         semantic_embeddings = self.semantic_embedding(input_var)
         semantic_embeddings = self.input_dropout(semantic_embeddings)
