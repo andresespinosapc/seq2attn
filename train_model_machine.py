@@ -253,7 +253,7 @@ parser.add_argument('--dha_learn_temperature', type=str, default=None, choices=[
 parser.add_argument('--dha_n_symbols', type=int, default=1, help='Number of symbols in which the decoder hidden state is transformed')
 parser.add_argument('--decoder_hidden_override', type=str, default=None, choices=['zeros', 'context'], help='Override decoder hidden state with another vector')
 
-parser.add_argument('--encoder_use_pos_enc', type=str, default=None, choices=['replace', 'apply'], help='Use positional encoding on encoder')
+parser.add_argument('--encoder_use_pos_enc', type=str, default=None, choices=['replace', 'apply', 'mine'], help='Use positional encoding on encoder')
 
 parser.add_argument('--exp_name', type=str, default=None, help='Experiment name for CometML logging')
 

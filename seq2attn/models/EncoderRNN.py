@@ -58,8 +58,12 @@ class EncoderRNN(BaseRNN):
         self.rnn = self.rnn_cell(embedding_size, hidden_size, n_layers,
                                  batch_first=True, bidirectional=bidirectional, dropout=dropout_p)
         self.use_positional_encoding = use_positional_encoding
-        if self.use_positional_encoding is not None:
+        if self.use_positional_encoding in ['replace', 'apply']:
             self.positional_encoding = PositionalEncoding(hidden_size, max_len=max_len)
+        elif self.use_positional_encoding == 'mine':
+            self.position0 = nn.Parameter(torch.empty(1, hidden_size))
+            nn.init.normal_(self.position0)
+            self.positional_transformation = nn.Linear(hidden_size, hidden_size)
 
     @property
     def device(self):
@@ -103,6 +107,11 @@ class EncoderRNN(BaseRNN):
         elif self.use_positional_encoding == 'apply':
             output = self.positional_encoding(output.transpose(0, 1)).transpose(0, 1)
             hidden = output[:, -1].unsqueeze(0)
+        elif self.use_positional_encoding == 'mine':
+            positions = [self.position0]
+            for i in range(1, output.shape[1]):
+                positions.append(self.positional_transformation(positions[-1]))
+            output = torch.cat(positions).unsqueeze(0).expand(output.shape)
 
         semantic_embeddings = self.semantic_embedding(input_var)
         semantic_embeddings = self.input_dropout(semantic_embeddings)
