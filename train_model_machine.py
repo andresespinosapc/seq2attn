@@ -196,7 +196,6 @@ parser.add_argument('--default_params_key', type=str, choices=list(TASK_DEFAULT_
 parser.add_argument('--l1_loss_inputs', type=str, nargs='*',
     choices=['encoder_hidden', 'model_parameters'], default=[])
 parser.add_argument('--scale_l1_loss', type=float, default=1.)
-parser.add_argument('--auto_print_every', action='store_true')
 parser.add_argument('--model', type=str, default='seq2attn', choices=['seq2attn', 'transformer'])
 
 parser.add_argument('--train', help='Training data')
@@ -227,7 +226,9 @@ parser.add_argument('--ignore_output_eos', action='store_true', help='Ignore end
 
 parser.add_argument('--load_checkpoint', help='The name of the checkpoint to load, usually an encoded time string')
 parser.add_argument('--save_every', type=int, help='Every how many batches the model should be saved', default=100)
+parser.add_argument('--save_every_epoch', type=bool, default=True, help='Save the model after every epoch')
 parser.add_argument('--print_every', type=int, help='Every how many batches to print results', default=100)
+parser.add_argument('--print_every_epoch', type=bool, default=True, help='Print results after every epoch')
 parser.add_argument('--resume', action='store_true', help='Indicates if training has to be resumed from the latest checkpoint')
 parser.add_argument('--log-level', default='info', help='Logging level.')
 parser.add_argument('--write-logs', help='Specify file to write logs to after training')
@@ -334,8 +335,12 @@ train = torchtext.data.TabularDataset(
 )
 train = get_standard_iter(train, batch_size=opt.batch_size)
 
-if opt.auto_print_every:
-    opt.print_every = int(len(train) / 2)
+if opt.print_every_epoch:
+    logging.info('Overriding print_every option to print every epoch...')
+    opt.print_every = len(train)
+if opt.save_every_epoch:
+    logging.info('Overriding save_every option to save every epoch...')
+    opt.save_every = len(train)
 
 if opt.dev:
     dev = torchtext.data.TabularDataset(
