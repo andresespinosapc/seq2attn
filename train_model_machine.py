@@ -253,6 +253,7 @@ parser.add_argument('--dha_initial_temperature', type=float, default=1., help='(
 parser.add_argument('--dha_learn_temperature', type=str, default=None, choices=['no', 'latent', 'conditioned'], help='Whether the temperature should be a learnable parameter. And whether it should be conditioned')
 parser.add_argument('--dha_n_symbols', type=int, default=1, help='Number of symbols in which the decoder hidden state is transformed')
 parser.add_argument('--decoder_hidden_override', type=str, default=None, choices=['zeros', 'context'], help='Override decoder hidden state with another vector')
+parser.add_argument('--use_external_memory', type=bool, default=None)
 
 parser.add_argument('--encoder_use_pos_enc', type=str, default=None, choices=['replace', 'apply', 'mine'], help='Use positional encoding on encoder')
 
@@ -428,7 +429,8 @@ else:
                             dha_initial_temperature=opt.dha_initial_temperature,
                             dha_learn_temperature=opt.dha_learn_temperature,
                             dha_n_symbols=opt.dha_n_symbols,
-                            decoder_hidden_override=opt.decoder_hidden_override)
+                            decoder_hidden_override=opt.decoder_hidden_override,
+                            use_external_memory=opt.use_external_memory)
         seq2seq = Seq2seq(seq2attn_encoder, decoder)
     elif opt.model == 'transformer':
         seq2seq = Transformer(

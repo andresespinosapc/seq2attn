@@ -6,6 +6,7 @@ in the form of attention over the encoder states or input embeddings.
 """
 
 import random
+import math
 
 import numpy as np
 
@@ -45,9 +46,9 @@ class Seq2AttnDecoder(nn.Module):
         use_attention(bool, optional): flag indication whether to use attention mechanism or not (default: false)
 
     Attributes:
-        KEY_ATTN_SCORE (str): key used to indicate attention weights in `ret_dict`
-        KEY_LENGTH (str): key used to indicate a list representing lengths of output sequences in `ret_dict`
-        KEY_SEQUENCE (str): key used to indicate a list of sequences in `ret_dict`
+        KEY_ATTN_SCORE (str): key used to indicate attention weights in `self.ret_dict`
+        KEY_LENGTH (str): key used to indicate a list representing lengths of output sequences in `self.ret_dict`
+        KEY_SEQUENCE (str): key used to indicate a list of sequences in `self.ret_dict`
 
     Inputs: inputs, encoder_hidden, encoder_outputs, function, teacher_forcing_ratio
         - **inputs** (batch, seq_len, input_size): list of sequences, whose length is the batch size and within which
@@ -62,16 +63,19 @@ class Seq2AttnDecoder(nn.Module):
           drawn uniformly from 0-1 for every decoding token, and if the sample is smaller than the given value,
           teacher forcing would be used (default is 0).
 
-    Outputs: decoder_outputs, decoder_hidden, ret_dict
+    Outputs: decoder_outputs, decoder_hidden, self.ret_dict
         - **decoder_outputs** (seq_len, batch, vocab_size): list of tensors with size (batch_size, vocab_size) containing
           the outputs of the decoding function.
         - **decoder_hidden** (num_layers * num_directions, batch, hidden_size): tensor containing the last hidden
           state of the decoder.
-        - **ret_dict**: dictionary containing additional information as follows {*KEY_LENGTH* : list of integers
+        - **self.ret_dict**: dictionary containing additional information as follows {*KEY_LENGTH* : list of integers
           representing lengths of output sequences, *KEY_SEQUENCE* : list of sequences, where each sequence is a list of
           predicted token IDs }.
     """
 
+    KEY_OUTPUT_GATE = 'output_gate'
+    KEY_MEMORY_READ_ATTN = 'memory_read_attention'
+    KEY_MEMORY_WRITE_ATTN = 'memory_write_attention'
     KEY_ATTN_SCORE = 'attention_score'
     KEY_LENGTH = 'length'
     KEY_SEQUENCE = 'sequence'
@@ -97,7 +101,8 @@ class Seq2AttnDecoder(nn.Module):
                  dha_initial_temperature=None,
                  dha_learn_temperature=None,
                  dha_n_symbols=1,
-                 decoder_hidden_override=None):
+                 decoder_hidden_override=None,
+                 use_external_memory=False):
         super(Seq2AttnDecoder, self).__init__()
 
         # Store values
@@ -136,6 +141,15 @@ class Seq2AttnDecoder(nn.Module):
                     learn_temperature=dha_learn_temperature,
                     initial_temperature=dha_initial_temperature)
         self.decoder_hidden_override = decoder_hidden_override
+        self.use_external_memory = use_external_memory
+        if self.use_external_memory:
+            self.initial_memory_keys = nn.Parameter(torch.empty((max_len, hidden_size)))
+            nn.init.kaiming_uniform_(self.initial_memory_keys, a=math.sqrt(5))
+            self.initial_memory_values = nn.Parameter(torch.zeros((max_len, vocab_size)))
+            self.read_query_linear = nn.Linear(embedding_dim + hidden_size, hidden_size)
+            self.output_gate_linear = nn.Linear(embedding_dim, 1)
+            self.context_output_linear = nn.Linear(embedding_dim, vocab_size)
+            self.write_query_linear = nn.Linear(hidden_size, hidden_size)
 
         # Get type of RNN cell
         rnn_cell = rnn_cell.lower()
@@ -213,6 +227,10 @@ class Seq2AttnDecoder(nn.Module):
             self.out = nn.Linear(self.hidden_size, vocab_size)
         elif self.output_value == 'context':
             self.out = nn.Linear(embedding_dim, vocab_size)
+
+    def init_memory(self, batch_size):
+        self.memory_keys = self.initial_memory_keys.expand(batch_size, *self.initial_memory_keys.shape)
+        self.memory_values = self.initial_memory_values.repeat(batch_size, 1, 1)
 
     def get_valid_action_mask(self, state, input_lengths):
         """Get valid action mask.
@@ -310,6 +328,7 @@ class Seq2AttnDecoder(nn.Module):
             list(torch.tensor): List of length max_output_length containing the selected actions
 
         """
+        batch_size = embedded.shape[0]
         h = transcoder_hidden
         if isinstance(transcoder_hidden, tuple):
             h, c = transcoder_hidden
@@ -317,39 +336,72 @@ class Seq2AttnDecoder(nn.Module):
             transcoder_hidden = self.hidden_bottleneck('transcoder', transcoder_hidden)
         transcoder_input = embedded
         if self.use_attention == 'pre-transcoder':
-            context, attn = self.attention(queries=h[-1:].transpose(0, 1), keys=attn_keys, values=attn_vals,
+            transcoder_hidden_queries = h[-1:].transpose(0, 1)
+            context, context_attn = self.attention(queries=transcoder_hidden_queries, keys=attn_keys, values=attn_vals,
                                         **kwargs)
+
+            if self.use_external_memory:
+                read_queries = self.read_query_linear(torch.cat((context, transcoder_hidden_queries), dim=-1))
+                memory_reading, memory_read_attn = self.attention(read_queries, self.memory_keys, self.memory_values)
+                self.ret_dict[Seq2AttnDecoder.KEY_MEMORY_READ_ATTN].append(memory_read_attn)
+                output_gate = torch.sigmoid(self.output_gate_linear(context))
+                self.ret_dict[Seq2AttnDecoder.KEY_OUTPUT_GATE].append(output_gate)
+                context = output_gate * memory_reading + (1 - output_gate) * self.context_output_linear(context)
+
             if self.transcoder_input in ['emb_and_russinctx', 'russinctx']:
-                russin_ctx = torch.bmm(attn, attn_keys)
+                russin_ctx = torch.bmm(context_attn, attn_keys)
                 if self.transcoder_input == 'emb_and_russinctx':
                     transcoder_input = torch.cat((embedded, russin_ctx), dim=2)
                 elif self.transcoder_input == 'russinctx':
                     transcoder_input = russin_ctx
+
         transcoder_output, transcoder_hidden = self.transcoder(transcoder_input, transcoder_hidden)
+
+        if self.use_external_memory:
+            h = transcoder_hidden
+            if isinstance(transcoder_hidden, tuple):
+                h, c = transcoder_hidden
+            transcoder_hidden_queries = h[-1:].transpose(0, 1)
+
+            write_queries = self.write_query_linear(transcoder_hidden_queries)
+            dummy = torch.empty((batch_size, self.max_length, 1)).to(device)
+            _, memory_write_attn = self.attention(write_queries, self.memory_keys, dummy)
+            self.ret_dict[Seq2AttnDecoder.KEY_MEMORY_WRITE_ATTN].append(memory_write_attn)
+            write_from_memory = torch.bmm(
+                (1 - memory_write_attn).view(-1, 1, 1),
+                self.memory_values.view(batch_size * self.max_length, 1, -1)
+            ).view(batch_size, self.max_length, -1)
+            write_from_context = torch.bmm(
+                memory_write_attn.view(-1, 1, 1),
+                context.expand(batch_size, self.max_length, -1).contiguous().view(batch_size * self.max_length, 1, -1)
+            ).view(batch_size, self.max_length, -1)
+            self.memory_values = write_from_memory + write_from_context
+
         if self.use_attention == 'post-transcoder':
-            context, attn = self.attention(queries=transcoder_output, keys=attn_keys, values=attn_vals,
+            context, context_attn = self.attention(queries=transcoder_output, keys=attn_keys, values=attn_vals,
                                         **kwargs)
 
-        decoder_input = torch.cat((context, embedded), dim=2)
+        if self.output_value == 'decoder_output':
+            decoder_input = torch.cat((context, embedded), dim=2)
 
-        if self.full_attention_focus:
-            if self.rnn_type == 'gru':
-                decoder_hidden = decoder_hidden * context.transpose(0, 1)
-            elif self.rnn_type == 'lstm':
-                decoder_hidden = (decoder_hidden[0] * context.transpose(0, 1),
-                                  decoder_hidden[1] * context.transpose(0, 1))
-        if self.decoder_hidden_activation is not None:
-            decoder_hidden = self.hidden_bottleneck('decoder', decoder_hidden)
-        if self.decoder_hidden_override == 'zeros':
-            decoder_hidden = decoder_hidden * \
-                torch.zeros_like(decoder_hidden, device=device)
-        elif self.decoder_hidden_override == 'context':
-            if self.rnn_type == 'gru':
-                decoder_hidden = context.transpose(0, 1)
-            elif self.rnn_type == 'lstm':
-                decoder_hidden = (context.transpose(0, 1),
-                                  context.transpose(0, 1))
-        decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
+            if self.full_attention_focus:
+                if self.rnn_type == 'gru':
+                    decoder_hidden = decoder_hidden * context.transpose(0, 1)
+                elif self.rnn_type == 'lstm':
+                    decoder_hidden = (decoder_hidden[0] * context.transpose(0, 1),
+                                    decoder_hidden[1] * context.transpose(0, 1))
+            if self.decoder_hidden_activation is not None:
+                decoder_hidden = self.hidden_bottleneck('decoder', decoder_hidden)
+            if self.decoder_hidden_override == 'zeros':
+                decoder_hidden = decoder_hidden * \
+                    torch.zeros_like(decoder_hidden, device=device)
+            elif self.decoder_hidden_override == 'context':
+                if self.rnn_type == 'gru':
+                    decoder_hidden = context.transpose(0, 1)
+                elif self.rnn_type == 'lstm':
+                    decoder_hidden = (context.transpose(0, 1),
+                                    context.transpose(0, 1))
+            decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
 
         if self.output_value == 'decoder_output':
             output = decoder_output
@@ -358,7 +410,7 @@ class Seq2AttnDecoder(nn.Module):
         else:
             raise ValueError('Invalid output_value %s' % (self.output_value))
 
-        return output, transcoder_hidden, decoder_hidden, attn
+        return output, transcoder_hidden, decoder_hidden, context_attn
 
     def forward_step(self, input_var, transcoder_hidden, decoder_hidden, attn_keys, attn_vals,
                      function, **kwargs):
@@ -394,7 +446,8 @@ class Seq2AttnDecoder(nn.Module):
             **kwargs)
 
         output = return_values[0].contiguous().view(batch_size, -1)
-        output = self.out(output)
+        if not self.use_external_memory:
+            output = self.out(output)
         activated_output = function(output, dim=1).view(batch_size, output_size, -1)
 
         new_return_values = [activated_output]
@@ -407,15 +460,20 @@ class Seq2AttnDecoder(nn.Module):
                 encoder_embeddings=None, encoder_hidden=None, encoder_outputs=None,
                 function=F.log_softmax, teacher_forcing_ratio=0):
         """Forward."""
-        ret_dict = dict()
-        ret_dict[Seq2AttnDecoder.KEY_ENCODER_HIDDEN] = encoder_hidden
+        self.ret_dict = dict()
+        self.ret_dict[Seq2AttnDecoder.KEY_ENCODER_HIDDEN] = encoder_hidden
         if self.use_attention:
-            ret_dict[Seq2AttnDecoder.KEY_ATTN_SCORE] = list()
+            self.ret_dict[Seq2AttnDecoder.KEY_ATTN_SCORE] = list()
+            self.ret_dict[Seq2AttnDecoder.KEY_MEMORY_READ_ATTN] = list()
+            self.ret_dict[Seq2AttnDecoder.KEY_MEMORY_WRITE_ATTN] = list()
+            self.ret_dict[Seq2AttnDecoder.KEY_OUTPUT_GATE] = list()
 
         inputs, batch_size, max_length = self._validate_args(inputs, encoder_hidden,
                                                              encoder_outputs,
                                                              teacher_forcing_ratio)
 
+        if self.use_external_memory:
+            self.init_memory(batch_size)
         transcoder_hidden = self._init_state(encoder_hidden, 'encoder')
         decoder_hidden = self._init_state(encoder_hidden, 'new')
 
@@ -428,7 +486,7 @@ class Seq2AttnDecoder(nn.Module):
         def decode(step, step_output, step_attn):
             decoder_outputs.append(step_output)
             if self.use_attention:
-                ret_dict[Seq2AttnDecoder.KEY_ATTN_SCORE].append(step_attn)
+                self.ret_dict[Seq2AttnDecoder.KEY_ATTN_SCORE].append(step_attn)
             symbols = decoder_outputs[-1].topk(1)[1]
             sequence_symbols.append(symbols)
 
@@ -506,10 +564,10 @@ class Seq2AttnDecoder(nn.Module):
                     step_attn = None
                 decode(di, step_output, step_attn)
 
-        ret_dict[Seq2AttnDecoder.KEY_SEQUENCE] = sequence_symbols
-        ret_dict[Seq2AttnDecoder.KEY_LENGTH] = lengths.tolist()
+        self.ret_dict[Seq2AttnDecoder.KEY_SEQUENCE] = sequence_symbols
+        self.ret_dict[Seq2AttnDecoder.KEY_LENGTH] = lengths.tolist()
 
-        return decoder_outputs, decoder_hidden, ret_dict
+        return decoder_outputs, decoder_hidden, self.ret_dict
 
     def _init_state(self, encoder_hidden, init_dec_with):
         if init_dec_with == 'encoder':
