@@ -320,8 +320,7 @@ class Seq2AttnDecoder(nn.Module):
             context, attn = self.attention(queries=h[-1:].transpose(0, 1), keys=attn_keys, values=attn_vals,
                                         **kwargs)
             if self.transcoder_input in ['emb_and_russinctx', 'russinctx']:
-                russin_ctx, _ = self.attention(queries=h[-1:].transpose(0, 1), keys=attn_keys, values=attn_keys,
-                                            **kwargs)
+                russin_ctx = torch.bmm(attn, attn_keys)
                 if self.transcoder_input == 'emb_and_russinctx':
                     transcoder_input = torch.cat((embedded, russin_ctx), dim=2)
                 elif self.transcoder_input == 'russinctx':
