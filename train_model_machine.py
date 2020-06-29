@@ -15,6 +15,7 @@ from seq2attn.models import EncoderRNN
 from seq2attn.models import Seq2AttnDecoder
 from seq2attn.models import Seq2seq
 from seq2attn.models import Transformer
+from seq2attn.datasets import TabularAugmentedDataset
 
 from machine.dataset import SourceField, get_standard_iter
 from machine.dataset import TargetField
@@ -197,6 +198,7 @@ parser.add_argument('--l1_loss_inputs', type=str, nargs='*',
     choices=['encoder_hidden', 'model_parameters'], default=[])
 parser.add_argument('--scale_l1_loss', type=float, default=1.)
 parser.add_argument('--model', type=str, default='seq2attn', choices=['seq2attn', 'transformer'])
+parser.add_argument('--augmented_input', type=bool, default=False)
 
 parser.add_argument('--train', help='Training data')
 parser.add_argument('--dev', help='Development data')
@@ -318,7 +320,7 @@ if opt.random_seed:
 
 ############################################################################
 # Prepare dataset
-src = SourceField(lower=opt.lower)
+src = SourceField(lower=opt.lower, preprocessing=lambda seq: seq + ['<eos>'])
 tgt = TargetField(include_eos=use_output_eos, lower=opt.lower)
 
 tabular_data_fields = [('src', src), ('tgt', tgt)]
@@ -329,7 +331,11 @@ def len_filter(example):
     return len(example.src) <= max_len and len(example.tgt) <= max_len
 
 # generate training and testing data
-train = torchtext.data.TabularDataset(
+if opt.augmented_input:
+    dataset_class = TabularAugmentedDataset
+else:
+    dataset_class = torchtext.data.TabularDataset
+train = dataset_class(
     path=opt.train, format='tsv',
     fields=tabular_data_fields,
     filter_pred=len_filter
